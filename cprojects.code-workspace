@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "path": "rp2040_scheduler"
+    },
+    {
+      "path": "pico_ram"
+    },
+    {
+      "path": "pico_6502"
+    }
+  ]
+}
