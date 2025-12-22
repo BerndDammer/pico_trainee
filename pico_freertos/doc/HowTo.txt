@@ -1,0 +1,64 @@
+NEIN : git clone https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+
+
+git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+
+read FreeRTOS-Kernel/examples/README.md 
+copy FreeRTOS-Kernel\examples\template_configuration\FreeRTOSConfig.h src
+
+read FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040/README.md
+copy FreeRTOS-Kernel\portable\ThirdParty\GCC\RP2040\FreeRTOS_Kernel_import.cmake src
+
+add
+include(FreeRTOS_Kernel_import.cmake)
+
+
+edit FreeRTOS_Kernel_import.cmake
+------------------------------
+
+    if (SEARCH_PASS)
+        # ports may be moving to submodule in the future
+        set(FREERTOS_KERNEL_RP2040_RELATIVE_PATH "portable/ThirdParty/GCC")
+        set(FREERTOS_KERNEL_RP2040_BACK_PATH "../../../..")    
+    else()
+        set(FREERTOS_KERNEL_RP2040_RELATIVE_PATH "portable/ThirdParty/GCC")
+        set(FREERTOS_KERNEL_RP2040_BACK_PATH "../../../..")
+    endif()
+----------------------------------
+
+--------------------------------
+New ... with new VSCODE + PLUG-IN
+------------------------------------------
+git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+
+read FreeRTOS-Kernel/examples/README.md 
+copy FreeRTOS-Kernel\examples\template_configuration\FreeRTOSConfig.h src
+
+read FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040/README.md
+copy FreeRTOS-Kernel\portable\ThirdParty\GCC\RP2040\FreeRTOS_Kernel_import.cmake src
+
+insert
+set(FREERTOS_KERNEL_PATH ../FreeRTOS-Kernel)
+after
+pico_sdk_init()
+----------------
+CMake Error at FreeRTOS_Kernel_import.cmake:87 (message):
+  Directory 'F:/pico/cprojects/pico_trainee/pico_freertos/FreeRTOS-Kernel'
+  does not contain a 'rp2040' port here:
+  portable/ThirdParty/Community-Supported-Ports/GCC/RP2040
+--------------------
+Port is in 
+FreeRTOS-Kernel\portable\ThirdParty\GCC\RP2040\
+
+edit FreeRTOS_Kernel_import.cmake [as above]
+
+-------------------------------------
+Make problems visible:
+open Terminal
+cmake -S . -B build -G "Ninja"
+ninja -C build
+------------------------------------------
+Anpassung FreRTOSConfig.h
+
+
+

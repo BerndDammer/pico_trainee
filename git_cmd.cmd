@@ -1,3 +1,3 @@
 rem start ..\..\bin\git\git-cmd.exe
-call ../SetEnv.bat
+call ../../SetEnv.bat
 start git-cmd.exe
