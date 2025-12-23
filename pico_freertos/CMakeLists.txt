@@ -70,12 +70,17 @@ include_directories("src")
 include_directories("FreeRTOS-Kernel/include")
 include_directories("FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040/include")
 
-
+add_subdirectory(FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040)
 
 
 # Add any user requested libraries
 target_link_libraries(pico_freertos 
         hardware_timer
+        )
+# Add any user requested libraries
+target_link_libraries(pico_freertos 
+        FreeRTOS-Kernel
+        FreeRTOS-Kernel-Heap4
         )
 
 pico_add_extra_outputs(pico_freertos)

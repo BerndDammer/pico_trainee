@@ -35,15 +35,6 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-# add_executable(rp2040_scheduler rp2040_scheduler.c )
-
-
-# target_sources(rp2040_scheduler PRIVATE
-#         ${CMAKE_CURRENT_LIST_DIR}/stub2.c
-#         ${CMAKE_CURRENT_LIST_DIR}/VCDSER.c
-#         ${CMAKE_CURRENT_LIST_DIR}/stub2.s
-#         )
-
 
 include_directories(
         ${PROJECT_SOURCE_DIR}/include
