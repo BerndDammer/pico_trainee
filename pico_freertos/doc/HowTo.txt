@@ -60,6 +60,14 @@ cmake -S . -B build -G "Ninja"
 ninja -C build
 ------------------------------------------
 Anpassung FreRTOSConfig.h
+#define INCLUDE_xTimerPendFunctionCall         1 // wegen port.h
+#define configCHECK_FOR_STACK_OVERFLOW        0
+
+
+or provide a function
+
+void vApplicationStackOverflowHook( TaskHandle_t xTask,
+                                    char *pcTaskName );
 
 cmake
 # Add libraries 4 FreeRTOS
@@ -67,5 +75,4 @@ target_link_libraries(pico_freertos
         FreeRTOS-Kernel
         FreeRTOS-Kernel-Heap4
         )
-
 

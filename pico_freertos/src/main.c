@@ -22,3 +22,9 @@ void main()
     vTaskStartScheduler();
 
 }
+
+void vApplicationStackOverflowHook( TaskHandle_t xTask,
+                                    char *pcTaskName )
+{
+    // what to do here
+}                                    

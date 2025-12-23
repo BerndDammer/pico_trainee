@@ -651,7 +651,7 @@
 #define configUSE_MUTEXES                      1
 #define configUSE_RECURSIVE_MUTEXES            1
 #define configUSE_COUNTING_SEMAPHORES          1
-#define configUSE_QUEUE_SETS                   0
+#define configUSE_QUEUE_SETS                   1
 #define configUSE_APPLICATION_TASK_TAG         0
 
 /* USE_POSIX_ERRNO enables the task global FreeRTOS_errno variable which will
@@ -672,7 +672,7 @@
 #define INCLUDE_uxTaskGetStackHighWaterMark    0
 #define INCLUDE_xTaskGetIdleTaskHandle         0
 #define INCLUDE_eTaskGetState                  0
-#define INCLUDE_xTimerPendFunctionCall         0
+#define INCLUDE_xTimerPendFunctionCall         1
 #define INCLUDE_xTaskAbortDelay                0
 #define INCLUDE_xTaskGetHandle                 0
 #define INCLUDE_xTaskResumeFromISR             1
