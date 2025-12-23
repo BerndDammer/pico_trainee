@@ -61,5 +61,11 @@ ninja -C build
 ------------------------------------------
 Anpassung FreRTOSConfig.h
 
+cmake
+# Add libraries 4 FreeRTOS
+target_link_libraries(pico_freertos 
+        FreeRTOS-Kernel
+        FreeRTOS-Kernel-Heap4
+        )
 
 

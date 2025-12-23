@@ -77,7 +77,7 @@ add_subdirectory(FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040)
 target_link_libraries(pico_freertos 
         hardware_timer
         )
-# Add any user requested libraries
+# Add libraries 4 FreeRTOS
 target_link_libraries(pico_freertos 
         FreeRTOS-Kernel
         FreeRTOS-Kernel-Heap4
