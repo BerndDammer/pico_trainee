@@ -10,7 +10,7 @@ int64_t alarm_callback(alarm_id_t id, void *user_data) {
 
 extern void dummy(void);
 extern void SVC_Handler(void);
-
+extern void SVC_Handler_TST2TST(void);
 int main()
 {
     stdio_init_all();
@@ -21,6 +21,7 @@ int main()
 
     dummy();
 
+    exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler_TST2TST);
     exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
 
     while (true) {

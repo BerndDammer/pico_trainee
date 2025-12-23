@@ -35,17 +35,31 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(rp2040_scheduler rp2040_scheduler.c )
+# add_executable(rp2040_scheduler rp2040_scheduler.c )
 
-target_sources(rp2040_scheduler PRIVATE
-        # ${CMAKE_CURRENT_LIST_DIR}/stub2.c
-        ${CMAKE_CURRENT_LIST_DIR}/VCDSER.c
-        # ${CMAKE_CURRENT_LIST_DIR}/stub2.asm
-        ${CMAKE_CURRENT_LIST_DIR}/stub2.s
+
+# target_sources(rp2040_scheduler PRIVATE
+#         ${CMAKE_CURRENT_LIST_DIR}/stub2.c
+#         ${CMAKE_CURRENT_LIST_DIR}/VCDSER.c
+#         ${CMAKE_CURRENT_LIST_DIR}/stub2.s
+#         )
+
+
+include_directories(
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
+)
+
+file(GLOB all_SRCS
+        "${PROJECT_SOURCE_DIR}/include/*.h"
+        "${PROJECT_SOURCE_DIR}/include/*.hpp"
+        "${PROJECT_SOURCE_DIR}/src/*.cpp"
+        "${PROJECT_SOURCE_DIR}/src/*.c"
+        "${PROJECT_SOURCE_DIR}/src/*.s"
         )
 
 
-
+add_executable(rp2040_scheduler ${all_SRCS})
 
 pico_set_program_name(rp2040_scheduler "rp2040_scheduler")
 pico_set_program_version(rp2040_scheduler "0.1")
@@ -62,6 +76,7 @@ target_link_libraries(rp2040_scheduler
 target_include_directories(rp2040_scheduler PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
+
 
 # Add any user requested libraries
 target_link_libraries(rp2040_scheduler
