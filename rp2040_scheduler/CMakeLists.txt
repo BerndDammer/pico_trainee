@@ -74,6 +74,7 @@ target_link_libraries(rp2040_scheduler
         hardware_timer
         hardware_exception
         pico_platform
+        pico_multicore
         cmsis_core
         )
 

@@ -9,11 +9,10 @@
 SVC_Handler: 
         LDR   R0,=SVC_Handler_Main
         MOV   R12,R0
-        MOVS  R0, LR
+        MOV   R0, LR
         MRS   R1, MSP
         MRS   R2, PSP
-        MRS   R3, xPSR
-
+        MRS   R3, CONTROL
         BX    R12
 .end        
 //---------

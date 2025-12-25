@@ -3,12 +3,17 @@
 
 #include "pico/stdlib.h"
 #include "hardware/timer.h"
+#include "hardware/clocks.h"
 #include "hardware/exception.h"
 #include "pico/platform.h"
+#include "pico/multicore.h"
 #include "cmsis_gcc.h"
+// #include "core_cm0plus.h" //conflicts with others
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_stubs.h"
 #include "project_main.h"
+#include "linker_workaround.h"
+#include "hardware/structs/systick.h"
 
 // RP2040 has two cores
 #define CORECOUNT 2
@@ -17,28 +22,40 @@
 #define ENTER_SCHEDULER
 #define LEAVE_SCHEDULER
 #define MAX_THREADS 8
-#define NO_THREAD (-1)
+#define NO_THREAD (struct thread_stack_frame *)(-1)
+#define LOWEST_PRIORITY 0XFF
+#define THREAD_MODE_RETURN_CODE 0XFFFFFFF9
 
-#define YOU_SHOULD_NOT_BE_HERE \
-    while (true)               \
-        ; //
+#define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
 
 struct cpu_info
 {
     uint32_t psp;
     uint32_t msp;
-    uint32_t xPSR;
+    CONTROL_t control;
     uint32_t wait_loop_counter;
 
 } cpu_info_at_start[CORECOUNT];
 
-extern void unallowed_thread_return_end(void);
 extern void init_thread_table(void);
 
-//extern void dummy(void);
+void SysTick_Handler(void)
+{
 
+}
 void init_sys_tick(int core)
 {
+    // TODO check clock source    
+    systick_hw->csr = 0;                                 // switch systick off
+    systick_hw->cvr = 0L;                                // current value
+    systick_hw->rvr = clock_get_hz(clk_sys) / 1UL - 1UL; // reload
+    systick_hw->calib;                                   // calibration
+
+    exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
+    exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY );
+
+    // last action activate the counter
+    systick_hw->csr = 7;
 }
 
 void __attribute__((noreturn)) main(void)
@@ -48,23 +65,36 @@ void __attribute__((noreturn)) main(void)
     // get stackpointers at start
     cpi->msp = __get_MSP();
     cpi->psp = __get_PSP();
-    cpi->xPSR = __get_xPSR();
+    cpi->control.w = __get_CONTROL();
 
     if (core == CORE0)
     {
-        // relocate core0 VTOR to scratchy_base
-        stdio_init_all();
+        // relocate core0 VTOR to scratch_y_base
         __disable_irq();
-        // init_thread_table();
+        memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
+        scb_hw->vtor = (uint32_t)CORE0_VTOR;
+        __enable_irq();
+        stdio_init_all();
+
+        __disable_irq();
+        init_thread_table();
+
+        // start core 1
+        memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
+        multicore_reset_core1();
+        multicore_launch_core1_raw(main, (uint32_t *)CORE1_STACK_TOP, (uint32_t)CORE1_VTOR);
     }
 
     init_sys_tick(core);
 
     exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
 
-    project_main();
-
     __enable_irq();
+
+    if (core == CORE0)
+    {
+        project_main();
+    }
 
     // the final one and only action at MSP without event
     cpi->wait_loop_counter = 0;
@@ -77,8 +107,8 @@ void __attribute__((noreturn)) main(void)
 
 void unallowed_thread_return_end(void)
 {
-    // YOU_SCHOULD_NOT_BE_HERE
     __SEV();
+    YOU_SHOULD_NOT_BE_HERE;
     while (true)
     {
     }
@@ -86,11 +116,15 @@ void unallowed_thread_return_end(void)
 
 // scheduler
 
-struct thread_stack_frame thread_list[MAX_THREADS];
+struct thread_stack_frame *thread_list[MAX_THREADS];
 
 void init_thread_table(void)
 {
     ENTER_SCHEDULER;
+    for (int i = 0; i < MAX_THREADS; i++)
+    {
+        thread_list[i] = NO_THREAD;
+    }
     LEAVE_SCHEDULER;
 }
 
@@ -110,8 +144,12 @@ void create_thread(
 void SVC_Handler_Main(uint32_t lr,
                       struct thread_stack_frame *msp,
                       struct thread_stack_frame *psp,
-                      uint32_t xPSR)
+                      CONTROL_t control)
 {
+    if (lr != THREAD_MODE_RETURN_CODE)
+    {
+        YOU_SHOULD_NOT_BE_HERE;
+    }
     if (lr & 4)
     {
         ENTER_SCHEDULER;
