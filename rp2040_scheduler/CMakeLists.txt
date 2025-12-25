@@ -73,6 +73,8 @@ target_include_directories(rp2040_scheduler PRIVATE
 target_link_libraries(rp2040_scheduler
         hardware_timer
         hardware_exception
+        pico_platform
+        cmsis_core
         )
 
 pico_add_extra_outputs(rp2040_scheduler)

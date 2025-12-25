@@ -1,0 +1,1 @@
+extern void project_main(void);
