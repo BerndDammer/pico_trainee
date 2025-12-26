@@ -72,6 +72,7 @@ void init_sys_tick(int core)
     exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
     // last action activate the counter
+    // TODO use sys_clk
     systick_hw->csr = 7;
 }
 
@@ -134,9 +135,9 @@ void thread_end_by_return(void)
 struct thread_stack_frame *thread_table[MAX_THREADS];
 
 // definitions for the idle threads
-#define IDLE_STACK_SIZE 64
 struct thread_stack_frame *idle_threads[CORECOUNT];
 
+#define IDLE_STACK_SIZE 64
 uint8_t idle_stack_frames[NUM_CORES][IDLE_STACK_SIZE];
 
 /// @brief initialized at scheduler start with all have no thread in it
@@ -209,6 +210,7 @@ uint32_t idle_thread(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
         __WFI();
         cpi->idle_loop_counter++;
     }
+    YOU_SHOULD_NOT_BE_HERE;
 }
 
 // TODO put in thread list
@@ -226,6 +228,7 @@ void __attribute__((noreturn)) enter_idle_thread_stub(
     asm("mov pc,r3");      // forces return from handler stack unloaad
     while (true)
         ; // never here; disable warning
+    YOU_SHOULD_NOT_BE_HERE;
 }
 void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
 {
@@ -238,11 +241,13 @@ void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
     idle_frame.xPSR = 0; // enable interrupts
 
     idle_threads[core_num] = (struct thread_stack_frame *)core_num;
+    // TODO setting control here correct ?????
     CONTROL_t c;
     {
         c.w = 0;
         c.bits.nPRIV = 0;
         c.bits.SPSEL = 1;
     }
-    enter_idle_thread_stub(msp, psp, c, 0XFFFFFFF9);
+    enter_idle_thread_stub(msp, psp, c, THREAD_MODE_RETURN_CODE);
+    YOU_SHOULD_NOT_BE_HERE;
 }
