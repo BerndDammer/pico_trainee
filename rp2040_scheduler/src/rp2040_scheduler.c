@@ -24,7 +24,7 @@
 #define MAX_THREADS 8
 #define NO_THREAD (struct thread_stack_frame *)(-1)
 #define LOWEST_PRIORITY 0XFF
-#define THREAD_MODE_RETURN_CODE 0XFFFFFFF9
+#define THREAD_MODE_PSP_RETURN_CODE 0XFFFFFFD
 
 #define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
 
@@ -91,10 +91,11 @@ void __attribute__((noreturn)) main(void)
         __disable_irq();
         memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
         scb_hw->vtor = (uint32_t)CORE0_VTOR;
+
         __enable_irq();
         stdio_init_all();
-
         __disable_irq();
+
         init_thread_table();
 
         // start core 1
@@ -164,6 +165,7 @@ void create_thread(
     uint32_t stack_size)
 {
     initial_stack->lr = (uint32_t)thread_end_by_return;
+    initial_stack->xPSR = 0; // consistent state
     size_t s = sizeof(struct thread_stack_frame);
     struct thread_stack_frame *psp;
 
@@ -180,7 +182,7 @@ void SVC_Handler_Main(uint32_t lr,
                       struct thread_stack_frame *psp,
                       CONTROL_t control)
 {
-    if (lr != THREAD_MODE_RETURN_CODE)
+    if (lr != THREAD_MODE_PSP_RETURN_CODE)
     {
         YOU_SHOULD_NOT_BE_HERE;
     }
@@ -225,9 +227,10 @@ void __attribute__((noreturn)) enter_idle_thread_stub(
     asm("msr msp,r0");
     asm("msr psp,r1");     // set stack for first thread start
     asm("msr control,r2"); // set to protected mode
-    asm("mov pc,r3");      // forces return from handler stack unloaad
+    asm("isb");            // ARM Tech manual!
+    asm("mov pc,r3");      // forces return from handler stack from psp unloaad
     while (true)
-        ; // never here; disable warning
+        ; // never here; disable compiler warning
     YOU_SHOULD_NOT_BE_HERE;
 }
 void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
@@ -242,12 +245,14 @@ void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
 
     idle_threads[core_num] = (struct thread_stack_frame *)core_num;
     // TODO setting control here correct ?????
+    // nPRIV = 1 Thread mode nonPrivileged; Handler Mode always privileged
+    // SPSEL = 0 here MPS; changed to PSP by return code
     CONTROL_t c;
     {
         c.w = 0;
-        c.bits.nPRIV = 0;
-        c.bits.SPSEL = 1;
+        c.bits.nPRIV = 1; 
+        c.bits.SPSEL = 0;
     }
-    enter_idle_thread_stub(msp, psp, c, THREAD_MODE_RETURN_CODE);
+    enter_idle_thread_stub(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
     YOU_SHOULD_NOT_BE_HERE;
 }
