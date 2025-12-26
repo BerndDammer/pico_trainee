@@ -41,18 +41,32 @@ extern void init_thread_table(void);
 
 void SysTick_Handler(void)
 {
-
+    scb_hw->icsr = 1 << 28; // Set PendSV Pending
 }
+
+void PendSV_Handler_Main(uint32_t lr,
+                         struct thread_stack_frame *msp,
+                         struct thread_stack_frame *psp,
+                         CONTROL_t control)
+{
+    ENTER_SCHEDULER;
+
+    LEAVE_SCHEDULER;
+}
+
 void init_sys_tick(int core)
 {
-    // TODO check clock source    
+    // TODO check clock source
     systick_hw->csr = 0;                                 // switch systick off
     systick_hw->cvr = 0L;                                // current value
     systick_hw->rvr = clock_get_hz(clk_sys) / 1UL - 1UL; // reload
     systick_hw->calib;                                   // calibration
 
     exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
-    exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY );
+    exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY);
+
+    exception_set_exclusive_handler(PENDSV_EXCEPTION, PendSV_Handler);
+    exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
     // last action activate the counter
     systick_hw->csr = 7;
@@ -88,6 +102,7 @@ void __attribute__((noreturn)) main(void)
     init_sys_tick(core);
 
     exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
+    exception_set_priority(SVCALL_EXCEPTION, LOWEST_PRIORITY);
 
     __enable_irq();
 
@@ -95,6 +110,9 @@ void __attribute__((noreturn)) main(void)
     {
         project_main();
     }
+
+    // TODO eenter first Thread
+
 
     // the final one and only action at MSP without event
     cpi->wait_loop_counter = 0;
