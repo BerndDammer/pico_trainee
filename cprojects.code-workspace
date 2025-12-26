@@ -8,6 +8,9 @@
     },
     {
       "path": "pico_6502"
+    },
+    {
+      "path": "pico_freertos"
     }
   ]
 }
