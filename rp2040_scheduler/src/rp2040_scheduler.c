@@ -33,11 +33,14 @@ struct cpu_info
     uint32_t psp;
     uint32_t msp;
     CONTROL_t control;
-    uint32_t wait_loop_counter;
+    uint32_t idle_loop_counter;
 
 } cpu_info_at_start[CORECOUNT];
 
+extern void thread_end_by_return(void);
+
 extern void init_thread_table(void);
+extern void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num);
 
 void SysTick_Handler(void)
 {
@@ -111,20 +114,12 @@ void __attribute__((noreturn)) main(void)
         project_main();
     }
 
-    // TODO eenter first Thread
-
-
-    // the final one and only action at MSP without event
-    cpi->wait_loop_counter = 0;
-    while (true)
-    {
-        __WFI();
-        cpi->wait_loop_counter++;
-    }
+    enter_idle_thread(core);
 }
 
-void unallowed_thread_return_end(void)
+void thread_end_by_return(void)
 {
+    // TODO delete active thread and enter idle if not enough threads remaining
     __SEV();
     YOU_SHOULD_NOT_BE_HERE;
     while (true)
@@ -133,32 +128,52 @@ void unallowed_thread_return_end(void)
 }
 
 // scheduler
+// every non running thread is identified by its psp
+// a running thread has the core number in it
+// a dead thread has NO_THREAD in it (-1)
+struct thread_stack_frame *thread_table[MAX_THREADS];
 
-struct thread_stack_frame *thread_list[MAX_THREADS];
+// definitions for the idle threads
+#define IDLE_STACK_SIZE 64
+struct thread_stack_frame *idle_threads[CORECOUNT];
 
+uint8_t idle_stack_frames[NUM_CORES][IDLE_STACK_SIZE];
+
+/// @brief initialized at scheduler start with all have no thread in it
+/// @param  none
 void init_thread_table(void)
 {
     ENTER_SCHEDULER;
     for (int i = 0; i < MAX_THREADS; i++)
     {
-        thread_list[i] = NO_THREAD;
+        thread_table[i] = NO_THREAD;
     }
     LEAVE_SCHEDULER;
 }
 
+/// @brief creates a thread
+/// @param initial_stack
+///        put start address in initial_stack.pc
+///        start parameter in initial_stack.r0 to .r3
+/// @param stack_base you have to assign the stack by your own
+/// @param stack_size
 void create_thread(
     struct thread_stack_frame *initial_stack,
     uint8_t *stack_base,
     uint32_t stack_size)
 {
-    initial_stack->lr = (uint32_t)unallowed_thread_return_end;
-    register size_t s = sizeof(struct thread_stack_frame);
-    memcpy(&stack_base[stack_size - s], initial_stack, s);
+    initial_stack->lr = (uint32_t)thread_end_by_return;
+    size_t s = sizeof(struct thread_stack_frame);
+    struct thread_stack_frame *psp;
+
+    psp = (struct thread_stack_frame *)(stack_base + stack_size - s);
+    memcpy(psp, initial_stack, s);
 
     ENTER_SCHEDULER;
     LEAVE_SCHEDULER;
 }
 
+// TODO used ????
 void SVC_Handler_Main(uint32_t lr,
                       struct thread_stack_frame *msp,
                       struct thread_stack_frame *psp,
@@ -178,3 +193,56 @@ void SVC_Handler_Main(uint32_t lr,
         YOU_SHOULD_NOT_BE_HERE;
     }
 };
+
+//-----------------------------------------------------------
+//             idle treads
+//-------------------------------------------------
+// every core gots one idle thread and enters it after initializion
+//
+
+uint32_t idle_thread(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
+{
+    struct cpu_info *cpi = &cpu_info_at_start[r0];
+    cpi->idle_loop_counter = 0;
+    while (true)
+    {
+        __WFI();
+        cpi->idle_loop_counter++;
+    }
+}
+
+// TODO put in thread list
+void __attribute__((noreturn)) enter_idle_thread_stub(
+    void *msp,
+    void *psp,
+    CONTROL_t control,
+    uint32_t lr_return_code)
+{
+    // intentionally set to msp stack top
+    // this kills all msp foreground tasks
+    asm("msr msp,r0");
+    asm("msr psp,r1");     // set stack for first thread start
+    asm("msr control,r2"); // set to protected mode
+    asm("mov pc,r3");      // forces return from handler stack unloaad
+    while (true)
+        ; // never here; disable warning
+}
+void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
+{
+    struct thread_stack_frame idle_frame;
+    void *msp = core_num ? CORE1_STACK_TOP : CORE0_STACK_TOP;
+    void *psp = idle_stack_frames[core_num] + IDLE_STACK_SIZE - (sizeof(struct thread_stack_frame));
+
+    idle_frame.pc = idle_thread;
+    idle_frame.r0 = core_num;
+    idle_frame.xPSR = 0; // enable interrupts
+
+    idle_threads[core_num] = (struct thread_stack_frame *)core_num;
+    CONTROL_t c;
+    {
+        c.w = 0;
+        c.bits.nPRIV = 0;
+        c.bits.SPSEL = 1;
+    }
+    enter_idle_thread_stub(msp, psp, c, 0XFFFFFFF9);
+}

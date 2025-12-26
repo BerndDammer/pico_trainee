@@ -6,4 +6,4 @@ extern struct thread_info {
     uint8_t *stack_base;
     uint32_t stack_size;
 
-}thread_list[];
+}thread_table[];
