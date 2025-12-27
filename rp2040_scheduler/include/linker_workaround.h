@@ -1,5 +1,5 @@
 // TODO how to ger these values from standard link process
-// TODO interact wit stack check
+// TODO interact with stack check
 // TODO interact with heap management
 
 

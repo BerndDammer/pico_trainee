@@ -11,7 +11,6 @@
 // #include "core_cm0plus.h" //conflicts with others
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_stubs.h"
-#include "project_main.h"
 #include "linker_workaround.h"
 #include "hardware/structs/systick.h"
 
@@ -156,6 +155,7 @@ void init_thread_table(void)
     LEAVE_SCHEDULER;
 }
 
+// TODO must execute as sv call or possible dead lock
 /// @brief creates a thread
 /// @param initial_stack
 ///        put start address in initial_stack.pc
@@ -163,17 +163,19 @@ void init_thread_table(void)
 /// @param stack_base you have to assign the stack by your own
 /// @param stack_size
 void create_thread(
-    struct thread_stack_frame *initial_stack,
+    standard_thread_start thread_function,
     uint8_t *stack_base,
-    uint32_t stack_size)
+    uint32_t stack_size,
+    uint32_t parameter)
 {
-    initial_stack->lr = (uint32_t)thread_end_by_return;
-    initial_stack->xPSR = 0; // consistent state
-    size_t s = sizeof(struct thread_stack_frame);
     struct thread_stack_frame *psp;
-
+    size_t s = sizeof(struct thread_stack_frame);
     psp = (struct thread_stack_frame *)(stack_base + stack_size - s);
-    memcpy(psp, initial_stack, s);
+
+    psp->pc = thread_function;
+    psp->r0 = parameter;
+    psp->lr = (uint32_t)thread_end_by_return;
+    psp->xPSR = 0; // consistent state
 
     ENTER_SCHEDULER;
     LEAVE_SCHEDULER;
@@ -206,7 +208,7 @@ void SVC_Handler_Main(uint32_t lr,
 // every core gots one idle thread and enters it after initializion
 //
 
-uint32_t idle_thread(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
+uint32_t idle_thread(uint32_t r0)
 {
     struct cpu_info *cpi = &cpu_info_at_start[r0];
     cpi->idle_loop_counter = 0;

@@ -1,4 +1,4 @@
-#include "rp2040_scheduler_stubs.h"
+//#include "rp2040_scheduler_stubs.h"
 
 .section .text
 .global SVC_Handler
