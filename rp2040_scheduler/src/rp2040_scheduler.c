@@ -92,28 +92,31 @@ void __attribute__((noreturn)) main(void)
         memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
         scb_hw->vtor = (uint32_t)CORE0_VTOR;
 
+        init_thread_table();
+    }
+
+    // init systick scheduler on both cores
+    init_sys_tick(core);
+    exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
+    exception_set_priority(SVCALL_EXCEPTION, LOWEST_PRIORITY);
+
+    if (core == CORE0)
+    {
         __enable_irq();
-        stdio_init_all();
+        project_core0_main();
         __disable_irq();
 
-        init_thread_table();
-
         // start core 1
+        // project_coreX_main not in parallel
         memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
         multicore_reset_core1();
         multicore_launch_core1_raw(main, (uint32_t *)CORE1_STACK_TOP, (uint32_t)CORE1_VTOR);
     }
-
-    init_sys_tick(core);
-
-    exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
-    exception_set_priority(SVCALL_EXCEPTION, LOWEST_PRIORITY);
-
-    __enable_irq();
-
-    if (core == CORE0)
+    else
     {
-        project_main();
+        __enable_irq();
+        project_core1_main();
+        __disable_irq();
     }
 
     enter_idle_thread(core);
@@ -250,7 +253,7 @@ void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
     CONTROL_t c;
     {
         c.w = 0;
-        c.bits.nPRIV = 1; 
+        c.bits.nPRIV = 1;
         c.bits.SPSEL = 0;
     }
     enter_idle_thread_stub(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);

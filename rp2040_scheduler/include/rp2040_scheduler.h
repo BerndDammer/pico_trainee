@@ -18,6 +18,8 @@
 
 typedef uint32_t (*standard_thread_start)(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
 
+// TODO : hide stack frame
+// create thread as pc stackbase size 1 start parameter
 struct thread_stack_frame
 {
     uint32_t r0;
