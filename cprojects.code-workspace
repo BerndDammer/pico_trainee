@@ -11,6 +11,9 @@
     },
     {
       "path": "pico_freertos"
+    },
+    {
+      "path": "pdp11_step1"
     }
   ]
 }
