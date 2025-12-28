@@ -62,8 +62,12 @@ pico_enable_stdio_uart(pdp11_step1 1)
 pico_enable_stdio_usb(pdp11_step1 0)
 
 
+# target_link_options(pdp11_step1 BEFORE PUBLIC -T "${PROJECT_SOURCE_DIR}/custom_memmap.ld")
+# double definition
 
-set(PICO_LINK_SCRIPT ${CMAKE_SOURCE_DIR}/custom_memmap.ld)
+set_target_properties(pdp11_step1 PROPERTIES PICO_TARGET_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/custom_memmap.ld")
+
+
 
 # Add the standard library to the build
 target_link_libraries(pdp11_step1
