@@ -54,6 +54,9 @@ add_executable(pdp11_step1 ${all_SRCS})
 pico_set_program_name(pdp11_step1 "pdp11_step1")
 pico_set_program_version(pdp11_step1 "0.1")
 
+# remove_definitions(assert)
+
+
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(pdp11_step1 1)
 pico_enable_stdio_usb(pdp11_step1 0)
