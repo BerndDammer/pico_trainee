@@ -24,14 +24,22 @@ typedef union
     uint32_t w;
 } CONTROL_t;
 
-extern void SVC_Handler(void);
-extern void SVC_Handler_Main(uint32_t lr,
-                             struct thread_stack_frame *msp,
-                             struct thread_stack_frame *psp,
-                             CONTROL_t control);
-
-extern void PendSV_Handler(void);
-extern void PendSV_Handler_Main(uint32_t lr,
+extern void My_SVC_Handler(void);
+extern void My_SVC_Handler_Main(uint32_t lr,
                                 struct thread_stack_frame *msp,
                                 struct thread_stack_frame *psp,
                                 CONTROL_t control);
+
+extern void My_PendSV_Handler(void);
+extern void My_PendSV_Handler_Main(uint32_t lr,
+                                   struct thread_stack_frame *msp,
+                                   struct thread_stack_frame *psp,
+                                   CONTROL_t control);
+
+void __attribute__((noreturn)) enter_idle_thread_stub(
+    void *msp,
+    void *psp,
+    CONTROL_t control,
+    uint32_t lr_return_code);
+
+#define SVC_THREAD_YIELD 2

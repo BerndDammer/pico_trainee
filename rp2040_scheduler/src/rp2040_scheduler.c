@@ -46,10 +46,10 @@ void SysTick_Handler(void)
     scb_hw->icsr = 1 << 28; // Set PendSV Pending
 }
 
-void PendSV_Handler_Main(uint32_t lr,
-                         struct thread_stack_frame *msp,
-                         struct thread_stack_frame *psp,
-                         CONTROL_t control)
+void My_PendSV_Handler_Main(uint32_t lr,
+                            struct thread_stack_frame *msp,
+                            struct thread_stack_frame *psp,
+                            CONTROL_t control)
 {
     ENTER_SCHEDULER;
 
@@ -67,7 +67,7 @@ void init_sys_tick(int core)
     exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
     exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY);
 
-    exception_set_exclusive_handler(PENDSV_EXCEPTION, PendSV_Handler);
+    exception_set_exclusive_handler(PENDSV_EXCEPTION, My_PendSV_Handler);
     exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
     // last action activate the counter
@@ -96,7 +96,7 @@ void __attribute__((noreturn)) main(void)
 
     // init systick scheduler on both cores
     init_sys_tick(core);
-    exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
+    exception_set_exclusive_handler(SVCALL_EXCEPTION, My_SVC_Handler);
     exception_set_priority(SVCALL_EXCEPTION, LOWEST_PRIORITY);
 
     if (core == CORE0)
@@ -180,12 +180,15 @@ void create_thread(
     ENTER_SCHEDULER;
     LEAVE_SCHEDULER;
 }
+// all scheduling function run on thread level 0XC0
+// lowes on rp2040
+// a guard must only be used because all two cores can enter at the same time
 
 // TODO used ????
-void SVC_Handler_Main(uint32_t lr,
-                      struct thread_stack_frame *msp,
-                      struct thread_stack_frame *psp,
-                      CONTROL_t control)
+void My_SVC_Handler_Main(uint32_t lr,
+                         struct thread_stack_frame *msp,
+                         struct thread_stack_frame *psp,
+                         CONTROL_t control)
 {
     if (lr != THREAD_MODE_PSP_RETURN_CODE)
     {
@@ -221,23 +224,25 @@ uint32_t idle_thread(uint32_t r0)
 }
 
 // TODO put in thread list
-void __attribute__((noreturn)) enter_idle_thread_stub(
-    void *msp,
-    void *psp,
-    CONTROL_t control,
-    uint32_t lr_return_code)
-{
-    // intentionally set to msp stack top
-    // this kills all msp foreground tasks
-    asm("msr msp,r0");
-    asm("msr psp,r1");     // set stack for first thread start
-    asm("msr control,r2"); // set to protected mode
-    asm("isb");            // ARM Tech manual!
-    asm("mov pc,r3");      // forces return from handler stack from psp unloaad
-    while (true)
-        ; // never here; disable compiler warning
-    YOU_SHOULD_NOT_BE_HERE;
-}
+// void __attribute__((noreturn)) enter_idle_thread_stub(
+//     void *msp,
+//     void *psp,
+//     CONTROL_t control,
+//     uint32_t lr_return_code)
+// {
+//     // intentionally set to msp stack top
+//     // this kills all msp foreground tasks
+//     asm("msr msp,r0");
+//     asm("msr psp,r1");     // set stack for first thread start
+//     asm("msr control,r2"); // set to protected mode
+//     asm("isb");            // ARM Tech manual!
+//     asm("mov pc,r3");      // forces return from handler stack from psp unloaad
+//     while (true)
+//         ; // never here; disable compiler warning
+//     YOU_SHOULD_NOT_BE_HERE;
+// }
+// TODO put in thread list
+
 void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
 {
     struct thread_stack_frame idle_frame;

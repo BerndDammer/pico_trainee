@@ -12,4 +12,5 @@ void project_core0_main(void)
 void project_core1_main(void)
 {
     // init hardware for core1 NVIC
+    thread_yield();
 }
