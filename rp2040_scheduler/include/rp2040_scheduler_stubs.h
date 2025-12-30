@@ -31,7 +31,7 @@ extern void My_SVC_Handler_Main(uint32_t lr,
                                 CONTROL_t control);
 
 extern void My_PendSV_Handler(void);
-extern void My_PendSV_Handler_Main(uint32_t lr,
+extern struct thread_stack_frame *My_PendSV_Handler_Main(uint32_t lr,
                                    struct thread_stack_frame *msp,
                                    struct thread_stack_frame *psp,
                                    CONTROL_t control);

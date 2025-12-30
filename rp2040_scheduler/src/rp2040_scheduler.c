@@ -46,7 +46,7 @@ void SysTick_Handler(void)
     scb_hw->icsr = 1 << 28; // Set PendSV Pending
 }
 
-void My_PendSV_Handler_Main(uint32_t lr,
+struct thread_stack_frame *My_PendSV_Handler_Main(uint32_t lr,
                             struct thread_stack_frame *msp,
                             struct thread_stack_frame *psp,
                             CONTROL_t control)
@@ -54,6 +54,7 @@ void My_PendSV_Handler_Main(uint32_t lr,
     ENTER_SCHEDULER;
 
     LEAVE_SCHEDULER;
+    return(psp);
 }
 
 void init_sys_tick(int core)

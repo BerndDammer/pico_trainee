@@ -20,20 +20,33 @@ My_SVC_Handler:
 
 //--------- PENDSV HANDLER --------------
 My_PendSV_Handler: 
+        // this and only this exception is used for thread switching
+        // the save registers R4-R11 must be saved here
+        MRS     R2, PSP
+        PUSH    {R4-R7}
+        # PUSH    {R8-R11}
+
+
+
         LDR   R0, =My_PendSV_Handler_Main
         MOV   IP, R0
         MOV   R0, LR
         MRS   R1, MSP
         MRS   R2, PSP
         MRS   R3, CONTROL
-        BX    IP
+        BLX    IP
+        // pop registers from psp
+        // force a 
+        POP     {R4-R7}
+        
 
 .global thread_yield
 .type thread_yield, %function
 //--------- SVC ENTRY THREAD  --------------
 // can be foreground because it triggers PendSV
 thread_yield:
-        SVC     =SVC_THREAD_YIELD
+        # SVC     =SVC_THREAD_YIELD
+        SVC     #1
         BX      LR
 
 
