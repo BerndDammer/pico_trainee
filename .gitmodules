@@ -4,3 +4,6 @@
 [submodule "pico_audio5/FreeRTOS-Kernel"]
 	path = pico_audio5/FreeRTOS-Kernel
 	url = https://github.com/raspberrypi/FreeRTOS-Kernel.git
+[submodule "picow_audio4/FreeRTOS-Kernel"]
+	path = picow_audio4/FreeRTOS-Kernel
+	url = https://github.com/raspberrypi/FreeRTOS-Kernel.git
