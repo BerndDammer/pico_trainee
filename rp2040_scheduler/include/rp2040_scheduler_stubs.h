@@ -1,5 +1,6 @@
 #include "cmsis_gcc.h"
 #include "rp2040_scheduler.h"
+#include "rp2040_scheduler_stubs_gas.h"
 
 struct thread_stack_frame
 {
@@ -42,4 +43,3 @@ void __attribute__((noreturn)) enter_idle_thread_stub(
     CONTROL_t control,
     uint32_t lr_return_code);
 
-#define SVC_THREAD_YIELD 2

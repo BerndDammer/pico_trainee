@@ -1,4 +1,9 @@
-//#include "rp2040_scheduler_stubs.h"
+// include defines only
+// more makes problems
+//
+// filename must have uppercase .S
+//
+#include "rp2040_scheduler_stubs_gas.h"
 
 .section .text
 .global My_SVC_Handler
@@ -45,8 +50,7 @@ My_PendSV_Handler:
 //--------- SVC ENTRY THREAD  --------------
 // can be foreground because it triggers PendSV
 thread_yield:
-        # SVC     =SVC_THREAD_YIELD
-        SVC     #1
+        SVC     SVC_THREAD_YIELD
         BX      LR
 
 

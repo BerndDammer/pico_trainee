@@ -43,7 +43,11 @@ extern void thread_yield(void);
 // implement these functions to start your project
 // _core0_ runs before and not parallel to _core1_xx
 // decide which interrupt is active on which core
-
+//
+// define your threads and hardware interrupts
+// after returning the init funktions your threads will be activated
+// by both cores
+//
 extern void project_core0_main(void);
 extern void project_core1_main(void);
 

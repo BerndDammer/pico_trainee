@@ -1,0 +1,1 @@
+#define SVC_THREAD_YIELD 2
