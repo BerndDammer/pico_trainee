@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/timer.h"
-//#include "hardware/watchdog.h"
-//#include "hardware/clocks.h"
 
 #define TIMEOUT_MIN 300
 #define TIMEOUT_MAX 500000
