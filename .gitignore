@@ -28,7 +28,6 @@ pioasm-install
 
 *.ninja*.*
 build.ninja
-*.ld
 build_*
 
 
