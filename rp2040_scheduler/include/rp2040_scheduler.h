@@ -28,6 +28,11 @@
 //
 // if nothing to do then yield
 //
+// takeing spinlocks reserved by pico-sdk for RTOS usage
+// PICO_SPINLOCK_ID_OS1
+// PICO_SPINLOCK_ID_OS2
+//
+
 
 typedef uint32_t (*standard_thread_start)(uint32_t parameter);
 

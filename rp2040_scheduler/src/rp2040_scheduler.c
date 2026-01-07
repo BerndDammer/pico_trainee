@@ -23,7 +23,6 @@
 #define MAX_THREADS 8
 #define NO_THREAD (struct thread_stack_frame *)(-1)
 #define LOWEST_PRIORITY 0XFF
-#define THREAD_MODE_PSP_RETURN_CODE 0XFFFFFFD
 
 #define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
 
@@ -46,15 +45,16 @@ void SysTick_Handler(void)
     scb_hw->icsr = 1 << 28; // Set PendSV Pending
 }
 
-struct thread_stack_frame *My_PendSV_Handler_Main(uint32_t lr,
-                            struct thread_stack_frame *msp,
-                            struct thread_stack_frame *psp,
-                            CONTROL_t control)
+struct full_stack_frame *My_PendSV_Handler_Main(
+    struct full_stack_frame *psp,
+    uint32_t lr,
+    void *msp,
+    CONTROL_t control)
 {
     ENTER_SCHEDULER;
 
     LEAVE_SCHEDULER;
-    return(psp);
+    return (psp);
 }
 
 void init_sys_tick(int core)
@@ -225,7 +225,7 @@ uint32_t idle_thread(uint32_t r0)
 }
 
 // TODO put in thread list
-// void __attribute__((noreturn)) enter_idle_thread_stub(
+// void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
 //     void *msp,
 //     void *psp,
 //     CONTROL_t control,
@@ -264,6 +264,6 @@ void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
         c.bits.nPRIV = 1;
         c.bits.SPSEL = 0;
     }
-    enter_idle_thread_stub(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
+    startup_thread_suicide_to_idle_thread(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
     YOU_SHOULD_NOT_BE_HERE;
 }
