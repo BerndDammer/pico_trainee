@@ -68,7 +68,7 @@ void init_sys_tick(int core)
     exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
     exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY);
 
-    exception_set_exclusive_handler(PENDSV_EXCEPTION, My_PendSV_Handler);
+    //exception_set_exclusive_handler(PENDSV_EXCEPTION, PendSV_Handler);
     exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
     // last action activate the counter
@@ -97,7 +97,7 @@ void __attribute__((noreturn)) main(void)
 
     // init systick scheduler on both cores
     init_sys_tick(core);
-    exception_set_exclusive_handler(SVCALL_EXCEPTION, My_SVC_Handler);
+    exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
     exception_set_priority(SVCALL_EXCEPTION, LOWEST_PRIORITY);
 
     if (core == CORE0)
@@ -163,7 +163,7 @@ void init_thread_table(void)
 ///        start parameter in initial_stack.r0 to .r3
 /// @param stack_base you have to assign the stack by your own
 /// @param stack_size
-void create_thread(
+void thread_create(
     standard_thread_start thread_function,
     uint8_t *stack_base,
     uint32_t stack_size,
@@ -186,7 +186,7 @@ void create_thread(
 // a guard must only be used because all two cores can enter at the same time
 
 // TODO used ????
-void My_SVC_Handler_Main(uint32_t lr,
+void SVC_Handler_Main(uint32_t lr,
                          struct thread_stack_frame *msp,
                          struct thread_stack_frame *psp,
                          CONTROL_t control)

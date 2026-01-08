@@ -45,14 +45,14 @@ typedef union
     uint32_t w;
 } CONTROL_t;
 
-extern void My_SVC_Handler(void);
-extern void My_SVC_Handler_Main(uint32_t lr,
+extern void SVC_Handler(void);
+extern void SVC_Handler_Main(uint32_t lr,
                                 struct thread_stack_frame *msp,
                                 struct thread_stack_frame *psp,
                                 CONTROL_t control);
 
-extern void My_PendSV_Handler(void);
-extern struct full_stack_frame *My_PendSV_Handler_Main(
+extern void PendSV_Handler(void);
+extern struct full_stack_frame *PendSV_Handler_Main(
     struct full_stack_frame *psp,
     uint32_t lr,
     void *msp,

@@ -8,11 +8,11 @@
 .section .text
 .syntax unified 
 
-.global My_SVC_Handler
-.type My_SVC_Handler, %function
+.global SVC_Handler
+.type SVC_Handler, %function
 
-.global My_PendSV_Handler
-.type My_PendSV_Handler, %function
+.global PendSV_Handler
+.type PendSV_Handler, %function
 
 // FP Frame Pointer R11
 // SL Stack Limit R10
@@ -23,8 +23,8 @@
 
 
 //--------- SVC HANDLER --------------
-My_SVC_Handler: 
-        LDR   R0, =My_SVC_Handler_Main
+SVC_Handler: 
+        LDR   R0, =SVC_Handler_Main
         MOV   IP, R0
         MOV   R0, LR
         MRS   R1, MSP
@@ -39,7 +39,8 @@ My_SVC_Handler:
 //
 // IP is alt-name for R12
 //
-My_PendSV_Handler: 
+// linked in by name
+PendSV_Handler: 
         MRS     R0, PSP
         SUBS    R0, #32                 // R0 has PSP after saving {R4-R11}
 
@@ -81,7 +82,7 @@ My_PendSV_Handler:
 
         .align 4
 loc_return_code:                //return to Thread mode with PSP
-        .word   THREAD_MODE_PSP_RETURN_CODE
+        .word   0XFFFFFFFD
 
 .global thread_yield
 .type thread_yield, %function

@@ -37,7 +37,7 @@
 typedef uint32_t (*standard_thread_start)(uint32_t parameter);
 
 // allocate stack ram is up to you
-extern void create_thread(
+extern void thread_create(
     standard_thread_start thread_function,
     uint8_t *stack_base,
     uint32_t stack_size,
