@@ -88,7 +88,7 @@ loc_return_code:                //return to Thread mode with PSP
 //--------- SVC ENTRY THREAD  --------------
 // can be foreground because it triggers PendSV
 thread_yield:
-        SVC     SVC_THREAD_YIELD
+        SVC     #SVC_THREAD_YIELD
         BX      LR
 
 
