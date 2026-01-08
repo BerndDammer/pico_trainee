@@ -14,6 +14,9 @@
 .global PendSV_Handler
 .type PendSV_Handler, %function
 
+.global PendSV_Handler_Main
+.type PendSV_Handler_Main, %function
+
 // FP Frame Pointer R11
 // SL Stack Limit R10
 // IP Intra Procedure R12
@@ -40,7 +43,7 @@ SVC_Handler:
 // IP is alt-name for R12
 //
 // linked in by name
-PendSV_Handler: 
+XX_PendSV_Handler: 
         MRS     R0, PSP
         SUBS    R0, #32                 // R0 has PSP after saving {R4-R11}
 
@@ -60,7 +63,7 @@ PendSV_Handler:
         MRS     R2, MSP
         MRS     R3, CONTROL
 
-        BL.W    My_PendSV_Handler_Main
+        BL.W    PendSV_Handler_Main
         // R0 contains the PSP of the now Thread to activate
 
         // restore save register {R4-R11}
@@ -105,6 +108,9 @@ startup_thread_suicide_to_idle_thread:
         MSR     CONTROL,R2      // set to protected mode
         ISB                     // ARM Tech manual!
         MOV     PC, R3          // forces return from handler stack from psp unloaad
+        //MOV      LR, R3
+        //BX      LR
+        //thread return from non thread mode ??????
 
 .end        
 //---------

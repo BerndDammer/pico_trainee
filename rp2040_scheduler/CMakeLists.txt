@@ -78,6 +78,7 @@ target_link_libraries(rp2040_scheduler
         pico_multicore
         cmsis_core
         pico_malloc
+        hardware_gpio
 )
 
 pico_add_extra_outputs(rp2040_scheduler)
