@@ -83,6 +83,29 @@ stack_pointer_t PendSV_Handler_Main(
     cpi->psv_msp = msp;
     cpi->psv_control = control;
     cpi->psv_lr = lr;
+
+    int core = get_core_num();
+
+    if (thread_table[0].w != core && thread_table[1].w != core)
+    {
+        psp = thread_table[0];
+        thread_table[0].w = core;
+    }
+    else
+    {
+        if (thread_table[0].w == core)
+        {
+            thread_table[0] = psp;
+            psp = thread_table[1];
+            thread_table[1].w = core;
+        }
+        else
+        {
+            thread_table[1] = psp;
+            psp = thread_table[0];
+            thread_table[0].w = core;
+        }
+    }
     LEAVE_SCHEDULER;
     // at the moment do nothing
     return (psp);
@@ -218,15 +241,21 @@ void thread_create(
     uint32_t parameter)
 {
     stack_pointer_t psp;
-    size_t s = sizeof(struct thread_stack_frame);
+    size_t s = sizeof(struct full_stack_frame);
     psp.bytes = stack_base + stack_size - s;
 
     psp.full_stack->pc.starter = thread_function;
     psp.full_stack->r0 = parameter;
     psp.full_stack->lr.starter = &thread_end_by_return;
-    psp.full_stack->xPSR = 0; // consistent state
+    psp.full_stack->xPSR = 1<<24;  // consistent state
 
     ENTER_SCHEDULER;
+    int index = 0;
+    while (thread_table[index].w != NO_THREAD && index < MAX_THREADS)
+    {
+        index++;
+    }
+    thread_table[index] = psp;
     LEAVE_SCHEDULER;
 }
 // all scheduling function run on thread level 0XC0

@@ -15,14 +15,15 @@ uint32_t  uncooperative_thread(uint32_t base_pin)
 {
     init_pin(base_pin);
     init_pin(base_pin + 1);
+    int sleep_time = 200 + 30*base_pin;
     while (true)
     {
         gpio_put(base_pin, true);
         gpio_put(base_pin + 1, false);
-        sleep_ms(250);
+        sleep_ms(sleep_time);
         gpio_put(base_pin, false);
         gpio_put(base_pin + 1, true);
-        sleep_ms(250);
+        sleep_ms(sleep_time);
     }
     return 0;
 }
@@ -36,7 +37,7 @@ void project_core0_main(void)
     int i;
     for (i = 0; i < 7; i++)
     {
-        thread_create(&uncooperative_thread, dummy_stack[i], 256, i + 2);
+        thread_create(&uncooperative_thread, dummy_stack[i], 256, 2*i + 2);
     }
 }
 
