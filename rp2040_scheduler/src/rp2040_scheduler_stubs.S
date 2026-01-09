@@ -45,6 +45,7 @@ SVC_Handler:
 // linked in by name
 PendSV_Handler:
         PUSH    {LR}                    // save whatever comming from
+
         MRS     R0, PSP
         SUBS    R0, #32                 // R0 has PSP after saving {R4-R11}
 
@@ -82,14 +83,6 @@ PendSV_Handler:
         // inject return to Thread Mode
         MSR     PSP, R1
         POP     {PC}                    // get aqired excepion code
-        //LDR     R1, loc_return_code    // can't load 32 bit direct !
-        //BX      R1
-
-//        .align 4
-//loc_return_code:                //return to Thread mode with PSP
-        //.word   0XFFFFFFFD
-//        .word   0XFFFFFFF9
-
 
 /////////////////////////////////////////////////////////////
 //
@@ -104,32 +97,29 @@ thread_yield:
         SVC     #SVC_THREAD_YIELD
         BX      LR
 
-startup_thread_suicide_to_idle_thread:
-        SVC     #SVC_START_THREAD_SUICIDE
-        BX      LR
-
 
 //--------- main thread termination -------
 .global startup_thread_suicide_to_idle_thread
 .type startup_thread_suicide_to_idle_thread, %function
 
 
-
-//--------- main thread termination -------
-.global startup_thread_suicide_to_idle_thread2
-.type startup_thread_suicide_to_idle_thread2, %function
-
-startup_thread_suicide_to_idle_thread2:
+startup_thread_suicide_to_idle_thread:
                                 // intentionally set to msp stack top
                                 // this kills all msp foreground tasks
-        MSR     MSP, R0
-        MSR     PSP, R1         // set stack for first thread start
-        MSR     CONTROL,R2      // set to protected mode
+        MSR     PSP, R2         // set stack for first thread start
+        MSR     MSP, R3
+
+        // first activate psp
+        // then enable interrupts
+        // last switch to unprivileged mode
+        MOVS    R3,#2           // psp stack and privileged
+        MSR     CONTROL,R3      // set to protected mode
         ISB                     // ARM Tech manual!
-        MOV     PC, R3          // forces return from handler stack from psp unloaad
-        //MOV      LR, R3
-        //BX      LR
-        //thread return from non thread mode ??????
+        CPSIE   I               // final enable interrupts
+        MOVS    R3,#3           // psp stack and protected mode
+        MSR     CONTROL,R3      // set to protected mode
+        ISB                     // ARM Tech manual!
+        BX      R1          
 
 .end        
 //---------

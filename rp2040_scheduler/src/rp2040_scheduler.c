@@ -7,8 +7,8 @@
 #include "hardware/exception.h"
 #include "pico/platform.h"
 #include "pico/multicore.h"
-#include "cmsis_gcc.h"
-// #include "core_cm0plus.h" //conflicts with others
+
+#include "pico.h"
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_stubs.h"
 #include "linker_workaround.h"
@@ -21,7 +21,7 @@
 #define ENTER_SCHEDULER
 #define LEAVE_SCHEDULER
 #define MAX_THREADS 8
-#define NO_THREAD (struct full_stack_frame *)(-1)
+#define NO_THREAD (-1)
 #define LOWEST_PRIORITY 0XFF
 
 // #define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
@@ -42,10 +42,22 @@ struct cpu_info
     uint32_t psv_lr;
 } cpu_info_at_start[CORECOUNT];
 
-extern void thread_end_by_return(void);
+// scheduler
+// every non running thread is identified by its psp
+// a running thread has the core number in it
+// a dead thread has NO_THREAD in it (-1)
+// only THREAD STATES: READY OR RUNNING
+stack_pointer_t thread_table[MAX_THREADS];
 
+// definitions for the idle threads
+stack_pointer_t idle_threads[CORECOUNT];
+
+#define IDLE_STACK_SIZE 256
+uint8_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
+
+extern void thread_end_by_return(void);
 extern void init_thread_table(void);
-extern void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num);
+extern uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0);
 
 void SysTick_Handler(void)
 {
@@ -117,7 +129,7 @@ void __attribute__((noreturn)) main(void)
     cpi->sys_tick_counter = 0;
 
     DEBUG_INIT;
-    __set_PSP(0x20018000); // or blind PendSV crashes
+    //__set_PSP(0x20018000); // or blind PendSV crashes
 
     if (core == CORE0)
     {
@@ -160,10 +172,16 @@ void __attribute__((noreturn)) main(void)
         project_core1_main();
         __disable_irq();
     }
+    {
+        stack_pointer_t msp, psp;
+        msp.bytes = core ? CORE1_STACK_TOP : CORE0_STACK_TOP;
+        psp.bytes = idle_stacks[core] + IDLE_STACK_SIZE;
 
-    enter_idle_thread(core);
+        idle_threads[core].w = core;
+        //while(true)__enable_irq();
+        startup_thread_suicide_to_idle_thread(core, &idle_thread, psp, msp);
+    }
 }
-
 void thread_end_by_return(void)
 {
     // TODO delete active thread and enter idle if not enough threads remaining
@@ -174,19 +192,6 @@ void thread_end_by_return(void)
     }
 }
 
-// scheduler
-// every non running thread is identified by its psp
-// a running thread has the core number in it
-// a dead thread has NO_THREAD in it (-1)
-// only THREAD STATES: READY OR RUNNING
-struct full_stack_frame *thread_table[MAX_THREADS];
-
-// definitions for the idle threads
-struct full_stack_frame *idle_threads[CORECOUNT];
-
-#define IDLE_STACK_SIZE 256
-uint8_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
-
 /// @brief initialized at scheduler start with all have no thread in it
 /// @param  none
 void init_thread_table(void)
@@ -194,7 +199,7 @@ void init_thread_table(void)
     ENTER_SCHEDULER;
     for (int i = 0; i < MAX_THREADS; i++)
     {
-        thread_table[i] = NO_THREAD;
+        thread_table[i].w = NO_THREAD;
     }
     LEAVE_SCHEDULER;
 }
@@ -236,18 +241,6 @@ void SVC_Handler_Main(uint32_t lr,
                       stack_pointer_t psp,
                       CONTROL_t control)
 {
-    svc_code = msp.frame_stack->pc.opcode[-1] & 0XFF;
-
-    stack_pointer_t sp = control.bits.SPSEL ? psp : msp;
-
-    stack_pointer_t new_msp, new_psp;
-    CONTROL_t t;
-    new_msp.w = sp.frame_stack->r0;
-    new_psp.w = sp.frame_stack->r1;
-    t.w = sp.frame_stack->r2;
-
-    startup_thread_suicide_to_idle_thread2(new_msp, new_psp, t, sp.frame_stack->r3);
-
     if (lr != THREAD_MODE_PSP_RETURN_CODE)
     {
         YOU_SHOULD_NOT_BE_HERE;
@@ -270,44 +263,16 @@ void SVC_Handler_Main(uint32_t lr,
 // every core gots one idle thread and enters it after initializion
 //
 
-uint32_t idle_thread(uint32_t r0)
+uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0)
 {
+    r0 = get_core_num();
     struct cpu_info *cpi = &cpu_info_at_start[r0];
     cpi->idle_loop_counter = 0;
+    //__enable_irq();
     while (true)
     {
-        __WFE();
+        //__WFE();
         cpi->idle_loop_counter++;
     }
-    YOU_SHOULD_NOT_BE_HERE;
-}
-
-void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
-{
-    struct full_stack_frame idle_frame;
-    stack_pointer_t msp, psp;
-    msp.bytes = core_num ? CORE1_STACK_TOP : CORE0_STACK_TOP;
-    psp.bytes = idle_stacks[core_num] + IDLE_STACK_SIZE - (sizeof(struct full_stack_frame));
-
-    idle_frame.pc.starter = idle_thread;
-    idle_frame.pc.w |= 1UL; // thumb bit ????
-    idle_frame.r0 = core_num;
-    // switch thumb bit on or crash hardfault
-    idle_frame.xPSR = 1 << 24; // enable interrupts
-
-    idle_threads[core_num] = (struct full_stack_frame *)core_num;
-    // TODO setting control here correct ?????
-    // nPRIV = 1 Thread mode nonPrivileged; Handler Mode always privileged
-    // SPSEL = 0 here MPS; changed to PSP by return code
-    CONTROL_t c;
-    {
-        c.w = 0;
-        c.bits.nPRIV = 1;
-        c.bits.SPSEL = 0;
-    }
-    __enable_irq();
-    startup_thread_suicide_to_idle_thread(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
-    while (true)
-        ;
     YOU_SHOULD_NOT_BE_HERE;
 }

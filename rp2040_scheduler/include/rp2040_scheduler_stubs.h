@@ -74,18 +74,12 @@ extern stack_pointer_t PendSV_Handler_Main(
     stack_pointer_t msp,
     CONTROL_t control);
 
-// void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
-void startup_thread_suicide_to_idle_thread(
-    stack_pointer_t msp,
+void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
+    uint32_t parameter,
+    standard_thread_start start_func,
     stack_pointer_t psp,
-    CONTROL_t control,
-    uint32_t lr_return_code);
-
-void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread2(
-    stack_pointer_t msp,
-    stack_pointer_t psp,
-    CONTROL_t control,
-    uint32_t lr_return_code);
+    stack_pointer_t msp
+);
 
 ////////////////////////////////////////////////
 // DEV SWITCH
