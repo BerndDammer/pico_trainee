@@ -43,7 +43,8 @@ SVC_Handler:
 // IP is alt-name for R12
 //
 // linked in by name
-XX_PendSV_Handler: 
+PendSV_Handler:
+        PUSH    {LR}                    // save whatever comming from
         MRS     R0, PSP
         SUBS    R0, #32                 // R0 has PSP after saving {R4-R11}
 
@@ -80,12 +81,14 @@ XX_PendSV_Handler:
 
         // inject return to Thread Mode
         MSR     PSP, R1
-        LDR     R1, loc_return_code    // can't load 32 bit direct !
-        BX      R1
+        POP     {PC}                    // get aqired excepion code
+        //LDR     R1, loc_return_code    // can't load 32 bit direct !
+        //BX      R1
 
-        .align 4
-loc_return_code:                //return to Thread mode with PSP
-        .word   0XFFFFFFFD
+//        .align 4
+//loc_return_code:                //return to Thread mode with PSP
+        //.word   0XFFFFFFFD
+//        .word   0XFFFFFFF9
 
 .global thread_yield
 .type thread_yield, %function

@@ -21,12 +21,10 @@
 #define ENTER_SCHEDULER
 #define LEAVE_SCHEDULER
 #define MAX_THREADS 8
-#define NO_THREAD (struct thread_stack_frame *)(-1)
+#define NO_THREAD (struct full_stack_frame *)(-1)
 #define LOWEST_PRIORITY 0XFF
 
 #define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
-
-
 
 #include "debug.h"
 
@@ -37,6 +35,10 @@ struct cpu_info
     CONTROL_t control;
     uint32_t idle_loop_counter;
     uint32_t sys_tick_counter;
+
+    uint16_t *psv_msp;
+    CONTROL_t psv_control;
+    uint32_t psv_lr;
 } cpu_info_at_start[CORECOUNT];
 
 extern void thread_end_by_return(void);
@@ -56,37 +58,51 @@ void SysTick_Handler(void)
 struct full_stack_frame *PendSV_Handler_Main(
     struct full_stack_frame *psp,
     uint32_t lr,
-    void *msp,
+    uint16_t *msp,
     CONTROL_t control)
 {
     DEBUG_PEND_SV;
     ENTER_SCHEDULER;
 
+    struct cpu_info *cpi = &cpu_info_at_start[get_core_num()];
+
+    // must do some trash to avoid optimize out
+    cpi->psv_msp = msp;
+    cpi->psv_control = control;
+    cpi->psv_lr = lr;
     LEAVE_SCHEDULER;
+    // at the moment do nothing
     return (psp);
 }
 
 void init_sys_tick(int core)
 {
-    // PendSV before SysTick 
-    //exception_set_exclusive_handler(PENDSV_EXCEPTION, PendSV_Handler);
-    exception_set_exclusive_handler(PENDSV_EXCEPTION, (exception_handler_t)PendSV_Handler_Main);
+    // PendSV before SysTick
+    // exception_set_exclusive_handler(PENDSV_EXCEPTION, PendSV_Handler);
+    // pendsv only running AFTER setting to psp running mode
+    // or PendSV_Handler crashes
+    exception_set_exclusive_handler(PENDSV_EXCEPTION, (exception_handler_t)PendSV_Handler);
     exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
     // TODO check clock source
-    systick_hw->csr = 0;                                 // switch systick off
-    systick_hw->cvr = 0L;                                // current value
-    systick_hw->rvr = clock_get_hz(clk_sys) / 1000UL - 1UL; // reload 1ms
-    systick_hw->calib;                                   // calibration
+    systick_hw->csr = 0;                                    // switch systick off
+    systick_hw->rvr = clock_get_hz(clk_sys) / 500UL - 1UL;  // reload 2ms / 500Hz
+    systick_hw->cvr = 0L;                                   // current value
+    systick_hw->calib;                                      // calibration
 
+#if RELOCATE_VECTOR_TABLE
     // set by name
-    //exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
+    exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
+#else
+#endif
     exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY);
-
 
     // last action activate the counter
     // TODO use sys_clk
     systick_hw->csr = 7;
+    
+    // 120 times slower
+    //systick_hw->csr = 3;
 }
 
 void __attribute__((noreturn)) main(void)
@@ -98,18 +114,20 @@ void __attribute__((noreturn)) main(void)
     cpi->psp = __get_PSP();
     cpi->control.w = __get_CONTROL();
     cpi->sys_tick_counter = 0;
-    
+
     DEBUG_INIT;
-    //__set_PSP(0x20018000); //or blind PendSV crashes
+    __set_PSP(0x20018000); //or blind PendSV crashes
 
     if (core == CORE0)
     {
         // relocate core0 VTOR to scratch_y_base
         __disable_irq();
-        // umkopieren nicht im system
-        //memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
-        //scb_hw->vtor = (uint32_t)CORE0_VTOR;
 
+#if RELOCATE_VECTOR_TABLE
+        memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
+        scb_hw->vtor = (uint32_t)CORE0_VTOR;
+#else
+#endif
         init_thread_table();
     }
 
@@ -124,11 +142,16 @@ void __attribute__((noreturn)) main(void)
         project_core0_main();
         __disable_irq();
 
+#if RELOCATE_VECTOR_TABLE
         // start core 1
         // project_coreX_main not in parallel
         memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
         multicore_reset_core1();
-        //multicore_launch_core1_raw(main, (uint32_t *)CORE1_STACK_TOP, (uint32_t)CORE1_VTOR);
+        multicore_launch_core1_raw(main, (uint32_t *)CORE1_STACK_TOP, (uint32_t)CORE1_VTOR);
+#else
+        // multicore_reset_core1();
+        // multicore_launch_core1(main);
+#endif
     }
     else
     {
@@ -154,10 +177,11 @@ void thread_end_by_return(void)
 // every non running thread is identified by its psp
 // a running thread has the core number in it
 // a dead thread has NO_THREAD in it (-1)
-struct thread_stack_frame *thread_table[MAX_THREADS];
+// only THREAD STATES: READY OR RUNNING
+struct full_stack_frame *thread_table[MAX_THREADS];
 
 // definitions for the idle threads
-struct thread_stack_frame *idle_threads[CORECOUNT];
+struct full_stack_frame *idle_threads[CORECOUNT];
 
 #define IDLE_STACK_SIZE 256
 uint8_t idle_stack_frames[NUM_CORES][IDLE_STACK_SIZE];
@@ -205,9 +229,9 @@ void thread_create(
 
 // TODO used ????
 void SVC_Handler_Main(uint32_t lr,
-                         struct thread_stack_frame *msp,
-                         struct thread_stack_frame *psp,
-                         CONTROL_t control)
+                      struct thread_stack_frame *msp,
+                      struct thread_stack_frame *psp,
+                      CONTROL_t control)
 {
     if (lr != THREAD_MODE_PSP_RETURN_CODE)
     {
@@ -236,44 +260,24 @@ uint32_t idle_thread(uint32_t r0)
     cpi->idle_loop_counter = 0;
     while (true)
     {
-        __WFI();
+        __WFE();
         cpi->idle_loop_counter++;
     }
     YOU_SHOULD_NOT_BE_HERE;
 }
 
-// TODO put in thread list
-// void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
-//     void *msp,
-//     void *psp,
-//     CONTROL_t control,
-//     uint32_t lr_return_code)
-// {
-//     // intentionally set to msp stack top
-//     // this kills all msp foreground tasks
-//     asm("msr msp,r0");
-//     asm("msr psp,r1");     // set stack for first thread start
-//     asm("msr control,r2"); // set to protected mode
-//     asm("isb");            // ARM Tech manual!
-//     asm("mov pc,r3");      // forces return from handler stack from psp unloaad
-//     while (true)
-//         ; // never here; disable compiler warning
-//     YOU_SHOULD_NOT_BE_HERE;
-// }
-// TODO put in thread list
-
 void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
 {
     struct thread_stack_frame idle_frame;
     void *msp = core_num ? CORE1_STACK_TOP : CORE0_STACK_TOP;
-    void *psp = idle_stack_frames[core_num] + IDLE_STACK_SIZE - (sizeof(struct thread_stack_frame));
+    void *psp = idle_stack_frames[core_num] + IDLE_STACK_SIZE - (sizeof(struct full_stack_frame));
 
     idle_frame.pc = idle_thread;
     idle_frame.r0 = core_num;
     // switch thumb bit on or crash hardfault
-    idle_frame.xPSR = 1<<24; // enable interrupts
+    idle_frame.xPSR = 1 << 24; // enable interrupts
 
-    idle_threads[core_num] = (struct thread_stack_frame *)core_num;
+    idle_threads[core_num] = (struct full_stack_frame *)core_num;
     // TODO setting control here correct ?????
     // nPRIV = 1 Thread mode nonPrivileged; Handler Mode always privileged
     // SPSEL = 0 here MPS; changed to PSP by return code
@@ -284,7 +288,8 @@ void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
         c.bits.SPSEL = 0;
     }
     __enable_irq();
-    while(true);
-    startup_thread_suicide_to_idle_thread(msp-8, psp, c, THREAD_MODE_PSP_RETURN_CODE);
+    while (true)
+        ;
+    startup_thread_suicide_to_idle_thread(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
     YOU_SHOULD_NOT_BE_HERE;
 }

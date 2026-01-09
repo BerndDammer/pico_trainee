@@ -1,0 +1,13 @@
+Let the SDK the things to to
+
+only use one vector table
+on the default position
+
+start core 1 with only pc set as sdk offers
+
+let SDK use their stack logic
+
+This sceduler allows running
+PendSV SVC and Systick running through equal code
+
+

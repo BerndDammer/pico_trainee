@@ -16,6 +16,14 @@ struct thread_stack_frame
 
 struct full_stack_frame
 {
+    uint32_t r4;
+    uint32_t r5;
+    uint32_t r6;
+    uint32_t r7;
+    uint32_t r8;
+    uint32_t r9;
+    uint32_t r10;
+    uint32_t r11;
     uint32_t r0;
     uint32_t r1;
     uint32_t r2;
@@ -24,14 +32,6 @@ struct full_stack_frame
     uint32_t lr;
     standard_thread_start pc;
     uint32_t xPSR;
-    uint32_t r11;
-    uint32_t r10;
-    uint32_t r9;
-    uint32_t r8;
-    uint32_t r7;
-    uint32_t r6;
-    uint32_t r5;
-    uint32_t r4;
 };
 
 typedef union
@@ -55,7 +55,7 @@ extern void PendSV_Handler(void);
 extern struct full_stack_frame *PendSV_Handler_Main(
     struct full_stack_frame *psp,
     uint32_t lr,
-    void *msp,
+    uint16_t *msp,
     CONTROL_t control);
 
 void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
@@ -63,3 +63,7 @@ void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
     void *psp,
     CONTROL_t control,
     uint32_t lr_return_code);
+
+    ////////////////////////////////////////////////
+    // DEV SWITCH
+    #define RELOCATE_VECTOR_TABLE 0
