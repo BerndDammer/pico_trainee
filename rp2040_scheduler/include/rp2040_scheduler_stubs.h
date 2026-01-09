@@ -16,7 +16,7 @@ struct thread_stack_frame
     uint32_t r2;
     uint32_t r3;
     uint32_t r12;
-    uint32_t lr;
+    program_counter_t lr;
     program_counter_t pc;
     uint32_t xPSR;
 };
@@ -36,7 +36,7 @@ struct full_stack_frame
     uint32_t r2;
     uint32_t r3;
     uint32_t r12;
-    uint32_t lr;
+    program_counter_t lr;
     program_counter_t pc;
     uint32_t xPSR;
 };

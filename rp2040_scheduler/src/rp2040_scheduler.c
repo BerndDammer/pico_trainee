@@ -55,7 +55,7 @@ stack_pointer_t idle_threads[CORECOUNT];
 #define IDLE_STACK_SIZE 256
 uint8_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
 
-extern void thread_end_by_return(void);
+extern uint32_t thread_end_by_return(uint32_t p);
 extern void init_thread_table(void);
 extern uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0);
 
@@ -129,7 +129,6 @@ void __attribute__((noreturn)) main(void)
     cpi->sys_tick_counter = 0;
 
     DEBUG_INIT;
-    //__set_PSP(0x20018000); // or blind PendSV crashes
 
     if (core == CORE0)
     {
@@ -178,11 +177,12 @@ void __attribute__((noreturn)) main(void)
         psp.bytes = idle_stacks[core] + IDLE_STACK_SIZE;
 
         idle_threads[core].w = core;
-        //while(true)__enable_irq();
+        // while(true)__enable_irq();
         startup_thread_suicide_to_idle_thread(core, &idle_thread, psp, msp);
     }
 }
-void thread_end_by_return(void)
+
+uint32_t thread_end_by_return(uint32_t p)
 {
     // TODO delete active thread and enter idle if not enough threads remaining
     __SEV();
@@ -217,14 +217,14 @@ void thread_create(
     uint32_t stack_size,
     uint32_t parameter)
 {
-    struct thread_stack_frame *psp;
+    stack_pointer_t psp;
     size_t s = sizeof(struct thread_stack_frame);
-    psp = (struct thread_stack_frame *)(stack_base + stack_size - s);
+    psp.bytes = stack_base + stack_size - s;
 
-    psp->pc.starter = thread_function;
-    psp->r0 = parameter;
-    psp->lr = (uint32_t)thread_end_by_return;
-    psp->xPSR = 0; // consistent state
+    psp.full_stack->pc.starter = thread_function;
+    psp.full_stack->r0 = parameter;
+    psp.full_stack->lr.starter = &thread_end_by_return;
+    psp.full_stack->xPSR = 0; // consistent state
 
     ENTER_SCHEDULER;
     LEAVE_SCHEDULER;
@@ -235,7 +235,6 @@ void thread_create(
 
 // TODO used ????
 
-uint8_t svc_code;
 void SVC_Handler_Main(uint32_t lr,
                       stack_pointer_t msp,
                       stack_pointer_t psp,
@@ -271,7 +270,7 @@ uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0)
     //__enable_irq();
     while (true)
     {
-        //__WFE();
+        __WFE();
         cpi->idle_loop_counter++;
     }
     YOU_SHOULD_NOT_BE_HERE;
