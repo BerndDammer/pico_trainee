@@ -90,6 +90,12 @@ PendSV_Handler:
         //.word   0XFFFFFFFD
 //        .word   0XFFFFFFF9
 
+
+/////////////////////////////////////////////////////////////
+//
+// Stubs for svc calls
+//
+
 .global thread_yield
 .type thread_yield, %function
 //--------- SVC ENTRY THREAD  --------------
@@ -98,12 +104,22 @@ thread_yield:
         SVC     #SVC_THREAD_YIELD
         BX      LR
 
+startup_thread_suicide_to_idle_thread:
+        SVC     #SVC_START_THREAD_SUICIDE
+        BX      LR
+
 
 //--------- main thread termination -------
 .global startup_thread_suicide_to_idle_thread
 .type startup_thread_suicide_to_idle_thread, %function
 
-startup_thread_suicide_to_idle_thread:
+
+
+//--------- main thread termination -------
+.global startup_thread_suicide_to_idle_thread2
+.type startup_thread_suicide_to_idle_thread2, %function
+
+startup_thread_suicide_to_idle_thread2:
                                 // intentionally set to msp stack top
                                 // this kills all msp foreground tasks
         MSR     MSP, R0

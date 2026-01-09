@@ -2,6 +2,13 @@
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_stubs_gas.h"
 
+typedef union 
+{ 
+    uint16_t *opcode;
+    uint32_t w;
+    standard_thread_start starter;
+}program_counter_t;
+
 struct thread_stack_frame
 {
     uint32_t r0;
@@ -10,7 +17,7 @@ struct thread_stack_frame
     uint32_t r3;
     uint32_t r12;
     uint32_t lr;
-    standard_thread_start pc;
+    program_counter_t pc;
     uint32_t xPSR;
 };
 
@@ -30,9 +37,17 @@ struct full_stack_frame
     uint32_t r3;
     uint32_t r12;
     uint32_t lr;
-    standard_thread_start pc;
+    program_counter_t pc;
     uint32_t xPSR;
 };
+
+typedef union 
+{
+    uint8_t *bytes;
+    struct thread_stack_frame *frame_stack;
+    struct full_stack_frame *full_stack;
+    uint32_t w;
+}stack_pointer_t;
 
 typedef union
 {
@@ -45,25 +60,33 @@ typedef union
     uint32_t w;
 } CONTROL_t;
 
+
 extern void SVC_Handler(void);
 extern void SVC_Handler_Main(uint32_t lr,
-                                struct thread_stack_frame *msp,
-                                struct thread_stack_frame *psp,
-                                CONTROL_t control);
+                             stack_pointer_t msp,
+                             stack_pointer_t psp,
+                             CONTROL_t control);
 
 extern void PendSV_Handler(void);
-extern struct full_stack_frame *PendSV_Handler_Main(
-    struct full_stack_frame *psp,
+extern stack_pointer_t PendSV_Handler_Main(
+    stack_pointer_t psp,
     uint32_t lr,
-    uint16_t *msp,
+    stack_pointer_t msp,
     CONTROL_t control);
 
-void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
-    void *msp,
-    void *psp,
+// void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
+void startup_thread_suicide_to_idle_thread(
+    stack_pointer_t msp,
+    stack_pointer_t psp,
     CONTROL_t control,
     uint32_t lr_return_code);
 
-    ////////////////////////////////////////////////
-    // DEV SWITCH
-    #define RELOCATE_VECTOR_TABLE 0
+void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread2(
+    stack_pointer_t msp,
+    stack_pointer_t psp,
+    CONTROL_t control,
+    uint32_t lr_return_code);
+
+////////////////////////////////////////////////
+// DEV SWITCH
+#define RELOCATE_VECTOR_TABLE 0

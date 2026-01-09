@@ -1,11 +1,14 @@
 #ifndef RP2040_SCHEDULER
 #define RP2040_SCHEDULER
 
-#include "cmsis_gcc.h"
+//#include "cmsis_gcc.h"
+#include "pico.h"
 
 //------------------------------------------
 // CORE0 STACK TOP and Vector Table in SCRATCH Y
 // CORE1 STACK TOP and Vector Table in SCRATCH X
+// 
+// NO ... VECTOR TABLE STAYS at bottom of ram
 //
 // complete main ram are free for
 // memory allocation

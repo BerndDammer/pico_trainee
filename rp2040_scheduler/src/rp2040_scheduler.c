@@ -24,19 +24,20 @@
 #define NO_THREAD (struct full_stack_frame *)(-1)
 #define LOWEST_PRIORITY 0XFF
 
-#define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
+// #define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
+#define YOU_SHOULD_NOT_BE_HERE
 
 #include "debug.h"
 
 struct cpu_info
 {
-    uint32_t psp;
-    uint32_t msp;
+    stack_pointer_t psp;
+    stack_pointer_t msp;
     CONTROL_t control;
     uint32_t idle_loop_counter;
     uint32_t sys_tick_counter;
 
-    uint16_t *psv_msp;
+    stack_pointer_t psv_msp;
     CONTROL_t psv_control;
     uint32_t psv_lr;
 } cpu_info_at_start[CORECOUNT];
@@ -55,10 +56,10 @@ void SysTick_Handler(void)
     cpi->sys_tick_counter++;
 }
 
-struct full_stack_frame *PendSV_Handler_Main(
-    struct full_stack_frame *psp,
+stack_pointer_t PendSV_Handler_Main(
+    stack_pointer_t psp,
     uint32_t lr,
-    uint16_t *msp,
+    stack_pointer_t msp,
     CONTROL_t control)
 {
     DEBUG_PEND_SV;
@@ -85,10 +86,10 @@ void init_sys_tick(int core)
     exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
     // TODO check clock source
-    systick_hw->csr = 0;                                    // switch systick off
-    systick_hw->rvr = clock_get_hz(clk_sys) / 500UL - 1UL;  // reload 2ms / 500Hz
-    systick_hw->cvr = 0L;                                   // current value
-    systick_hw->calib;                                      // calibration
+    systick_hw->csr = 0;                                   // switch systick off
+    systick_hw->rvr = clock_get_hz(clk_sys) / 500UL - 1UL; // reload 2ms / 500Hz
+    systick_hw->cvr = 0L;                                  // current value
+    systick_hw->calib;                                     // calibration
 
 #if RELOCATE_VECTOR_TABLE
     // set by name
@@ -100,9 +101,9 @@ void init_sys_tick(int core)
     // last action activate the counter
     // TODO use sys_clk
     systick_hw->csr = 7;
-    
+
     // 120 times slower
-    //systick_hw->csr = 3;
+    // systick_hw->csr = 3;
 }
 
 void __attribute__((noreturn)) main(void)
@@ -110,13 +111,13 @@ void __attribute__((noreturn)) main(void)
     int core = get_core_num();
     struct cpu_info *cpi = &cpu_info_at_start[core];
     // get stackpointers at start
-    cpi->msp = __get_MSP();
-    cpi->psp = __get_PSP();
+    cpi->msp.w = __get_MSP();
+    cpi->psp.w = __get_PSP();
     cpi->control.w = __get_CONTROL();
     cpi->sys_tick_counter = 0;
 
     DEBUG_INIT;
-    __set_PSP(0x20018000); //or blind PendSV crashes
+    __set_PSP(0x20018000); // or blind PendSV crashes
 
     if (core == CORE0)
     {
@@ -184,7 +185,7 @@ struct full_stack_frame *thread_table[MAX_THREADS];
 struct full_stack_frame *idle_threads[CORECOUNT];
 
 #define IDLE_STACK_SIZE 256
-uint8_t idle_stack_frames[NUM_CORES][IDLE_STACK_SIZE];
+uint8_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
 
 /// @brief initialized at scheduler start with all have no thread in it
 /// @param  none
@@ -215,7 +216,7 @@ void thread_create(
     size_t s = sizeof(struct thread_stack_frame);
     psp = (struct thread_stack_frame *)(stack_base + stack_size - s);
 
-    psp->pc = thread_function;
+    psp->pc.starter = thread_function;
     psp->r0 = parameter;
     psp->lr = (uint32_t)thread_end_by_return;
     psp->xPSR = 0; // consistent state
@@ -228,11 +229,25 @@ void thread_create(
 // a guard must only be used because all two cores can enter at the same time
 
 // TODO used ????
+
+uint8_t svc_code;
 void SVC_Handler_Main(uint32_t lr,
-                      struct thread_stack_frame *msp,
-                      struct thread_stack_frame *psp,
+                      stack_pointer_t msp,
+                      stack_pointer_t psp,
                       CONTROL_t control)
 {
+    svc_code = msp.frame_stack->pc.opcode[-1] & 0XFF;
+
+    stack_pointer_t sp = control.bits.SPSEL ? psp : msp;
+
+    stack_pointer_t new_msp, new_psp;
+    CONTROL_t t;
+    new_msp.w = sp.frame_stack->r0;
+    new_psp.w = sp.frame_stack->r1;
+    t.w = sp.frame_stack->r2;
+
+    startup_thread_suicide_to_idle_thread2(new_msp, new_psp, t, sp.frame_stack->r3);
+
     if (lr != THREAD_MODE_PSP_RETURN_CODE)
     {
         YOU_SHOULD_NOT_BE_HERE;
@@ -244,6 +259,7 @@ void SVC_Handler_Main(uint32_t lr,
     }
     else
     {
+        control.w++;
         YOU_SHOULD_NOT_BE_HERE;
     }
 };
@@ -268,11 +284,13 @@ uint32_t idle_thread(uint32_t r0)
 
 void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
 {
-    struct thread_stack_frame idle_frame;
-    void *msp = core_num ? CORE1_STACK_TOP : CORE0_STACK_TOP;
-    void *psp = idle_stack_frames[core_num] + IDLE_STACK_SIZE - (sizeof(struct full_stack_frame));
+    struct full_stack_frame idle_frame;
+    stack_pointer_t msp, psp;
+    msp.bytes = core_num ? CORE1_STACK_TOP : CORE0_STACK_TOP;
+    psp.bytes = idle_stacks[core_num] + IDLE_STACK_SIZE - (sizeof(struct full_stack_frame));
 
-    idle_frame.pc = idle_thread;
+    idle_frame.pc.starter = idle_thread;
+    idle_frame.pc.w |= 1UL; // thumb bit ????
     idle_frame.r0 = core_num;
     // switch thumb bit on or crash hardfault
     idle_frame.xPSR = 1 << 24; // enable interrupts
@@ -288,8 +306,8 @@ void __attribute__((noreturn)) enter_idle_thread(uint32_t core_num)
         c.bits.SPSEL = 0;
     }
     __enable_irq();
+    startup_thread_suicide_to_idle_thread(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
     while (true)
         ;
-    startup_thread_suicide_to_idle_thread(msp, psp, c, THREAD_MODE_PSP_RETURN_CODE);
     YOU_SHOULD_NOT_BE_HERE;
 }
