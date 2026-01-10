@@ -26,14 +26,22 @@
 
 
 //--------- SVC HANDLER --------------
-SVC_Handler: 
-        LDR   R0, =SVC_Handler_Main
-        MOV   IP, R0
-        MOV   R0, LR
-        MRS   R1, MSP
-        MRS   R2, PSP
-        MRS   R3, CONTROL
-        BX    IP
+// may come from PSP or MSP at start thread
+SVC_Handler:
+        MOV     R3, LR
+        MOVS    R2, #4
+        TST     R3, R2
+        BEQ.N   use_msp
+        MRS     R1, PSP
+        B.N     use_psp
+use_msp:
+        MRS     R1, MSP
+use_psp:                
+        LDR     R2, [R1,#6*4]     // stacked pc; index word count im op code
+        SUBS    R2, #2
+        LDRB    R0, [R2]     
+        LDR     R3, =SVC_Handler_Main
+        BX      R3
      
 
 //--------- PENDSV HANDLER --------------
@@ -89,6 +97,14 @@ PendSV_Handler:
 // Stubs for svc calls
 //
 
+.global thread_create
+.type thread_create, %function
+//--------- SVC ENTRY THREAD  --------------
+// can be foreground because it triggers PendSV
+thread_create:
+        SVC     #SVC_THREAD_CREATE
+        BX      LR
+
 .global thread_yield
 .type thread_yield, %function
 //--------- SVC ENTRY THREAD  --------------
@@ -98,10 +114,14 @@ thread_yield:
         BX      LR
 
 
+
+
+/////////////////////////////////////////////////////////////
+//
+//
 //--------- main thread termination -------
 .global startup_thread_suicide_to_idle_thread
 .type startup_thread_suicide_to_idle_thread, %function
-
 
 startup_thread_suicide_to_idle_thread:
                                 // intentionally set to msp stack top

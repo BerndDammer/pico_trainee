@@ -1,4 +1,4 @@
-//#include "cmsis_gcc.h"
+// #include "cmsis_gcc.h"
 #ifndef RP2040_SCHEDULER_STUBS
 #define RP2040_SCHEDULER_STUBS
 
@@ -6,12 +6,21 @@
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_stubs_gas.h"
 
-typedef union 
-{ 
+typedef union
+{
+    uint8_t *bytes;
+    struct thread_stack_frame *frame_stack;
+    struct full_stack_frame *full_stack;
+    uint32_t w;
+    int32_t signed_w;
+} stack_pointer_t;
+
+typedef union
+{
     uint16_t *opcode;
     uint32_t w;
     standard_thread_start starter;
-}program_counter_t;
+} program_counter_t;
 
 struct thread_stack_frame
 {
@@ -45,14 +54,6 @@ struct full_stack_frame
     uint32_t xPSR;
 };
 
-typedef union 
-{
-    uint8_t *bytes;
-    struct thread_stack_frame *frame_stack;
-    struct full_stack_frame *full_stack;
-    uint32_t w;
-}stack_pointer_t;
-
 typedef union
 {
     struct
@@ -64,12 +65,8 @@ typedef union
     uint32_t w;
 } CONTROL_t;
 
-
 extern void SVC_Handler(void);
-extern void SVC_Handler_Main(uint32_t lr,
-                             stack_pointer_t msp,
-                             stack_pointer_t psp,
-                             CONTROL_t control);
+extern void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp);
 
 extern void PendSV_Handler(void);
 extern stack_pointer_t PendSV_Handler_Main(
@@ -82,10 +79,6 @@ void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
     uint32_t parameter,
     standard_thread_start start_func,
     stack_pointer_t psp,
-    stack_pointer_t msp
-);
+    stack_pointer_t msp);
 
-////////////////////////////////////////////////
-// DEV SWITCH
-#define RELOCATE_VECTOR_TABLE 0
 #endif

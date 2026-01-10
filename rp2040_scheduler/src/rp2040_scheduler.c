@@ -133,45 +133,36 @@ uint32_t thread_end_by_return(uint32_t p)
     LEAVE_SCHEDULER;
 }
 
-// TODO must execute as sv call or possible dead lock
-/// @brief creates a thread
-/// @param initial_stack
-///        put start address in initial_stack.pc
-///        start parameter in initial_stack.r0 to .r3
-/// @param stack_base you have to assign the stack by your own
-/// @param stack_size
-void thread_create(
-    standard_thread_start thread_function,
-    uint8_t *stack_base,
-    uint32_t stack_size,
-    uint32_t parameter)
-{
-    stack_pointer_t psp;
-    size_t s = sizeof(struct full_stack_frame);
-    psp.bytes = stack_base + stack_size - s;
-
-    psp.full_stack->pc.starter = thread_function;
-    psp.full_stack->r0 = parameter;
-    psp.full_stack->lr.starter = &thread_end_by_return;
-    psp.full_stack->xPSR = 1 << 24; // consistent state; without thumb HardFault
-
-    ENTER_SCHEDULER;
-    sl_new(psp);
-    LEAVE_SCHEDULER;
-}
 // all scheduling function run on thread level 0XC0
 // lowes on rp2040
 // a guard must only be used because all two cores can enter at the same time
 
-// TODO used ????
-
-void SVC_Handler_Main(uint32_t lr,
-                      stack_pointer_t msp,
-                      stack_pointer_t psp,
-                      CONTROL_t control)
+void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
 {
-    while (true)
-        ;
+    switch (svc_code)
+    {
+    case SVC_THREAD_CREATE:
+    {
+        stack_pointer_t stack;
+        size_t s = sizeof(struct full_stack_frame);
+        stack.w = psp.frame_stack->r1 + psp.frame_stack->r2 - s;
+        stack.full_stack->pc.w = psp.frame_stack->r0;
+        stack.full_stack->r0 = psp.frame_stack->r3; // parameter
+        stack.full_stack->lr.starter = &thread_end_by_return;
+        stack.full_stack->xPSR = 1 << 24; // consistent state; without thumb HardFault
+
+        ENTER_SCHEDULER;
+        sl_new(stack);
+        LEAVE_SCHEDULER;
+    }
+    break;
+    case SVC_THREAD_YIELD:
+        scb_hw->icsr = 1 << 28; // Set PendSV Pending
+        break;
+    default:
+        panic("Unsupported SVC call");
+        break;
+    }
 };
 
 //-----------------------------------------------------------

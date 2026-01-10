@@ -37,18 +37,21 @@ void sl_first(int core_number, stack_pointer_t psp)
 void sl_new(stack_pointer_t psp)
 {
     int index = 0;
-    while (thread_table[index].w != NO_THREAD && index < MAX_THREADS)
+    while (index < MAX_THREADS)
     {
+        if (thread_table[index].w == NO_THREAD)
+        {
+            thread_table[index] = psp;
+            return;
+        }
         index++;
-        if (index >= MAX_THREADS)
-            panic("too much threads");
     }
-    thread_table[index] = psp;
+    panic("too much threads");
 }
 
 stack_pointer_t sl_next(int core, stack_pointer_t psp)
 {
-    if (thread_table[1].w != core)
+    if (thread_table[0].w != core && thread_table[1].w != core)
     {
         psp = thread_table[0];
         thread_table[0].w = core;
@@ -68,6 +71,7 @@ stack_pointer_t sl_next(int core, stack_pointer_t psp)
             thread_table[0].w = core;
         }
     }
+    return(psp);
 }
 
 void sl_end(int core_number)

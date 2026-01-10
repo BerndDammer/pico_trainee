@@ -39,7 +39,12 @@
 
 typedef uint32_t (*standard_thread_start)(uint32_t parameter);
 
-// allocate stack ram is up to you
+/// @brief creates a thread
+/// @param initial_stack
+///        put start address in initial_stack.pc
+///        start parameter in initial_stack.r0 to .r3
+/// @param stack_base you have to assign the stack by your own
+/// @param stack_size// allocate stack ram is up to you
 extern void thread_create(
     standard_thread_start thread_function,
     uint8_t *stack_base,
