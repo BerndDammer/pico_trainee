@@ -1,71 +1,47 @@
 #include <stdio.h>
 #include <string.h> // memcpy
 
+#include "pico.h"
 #include "pico/stdlib.h"
+#include "pico/platform.h"
+#include "pico/multicore.h"
 #include "hardware/timer.h"
 #include "hardware/clocks.h"
 #include "hardware/exception.h"
-#include "pico/platform.h"
-#include "pico/multicore.h"
-
-#include "pico.h"
-#include "rp2040_scheduler.h"
-#include "rp2040_scheduler_stubs.h"
-#include "linker_workaround.h"
 #include "hardware/structs/systick.h"
 
-// RP2040 has two cores
-#define CORECOUNT 2
+#include "rp2040_scheduler.h"
+#include "rp2040_scheduler_logic.h"
+#include "rp2040_scheduler_stubs.h"
+#include "linker_workaround.h"
+
+// TODO has pico lib QQQQ
+#include "cmsis_gcc.h"
+
 #define CORE0 0
 
 #define ENTER_SCHEDULER
 #define LEAVE_SCHEDULER
-#define MAX_THREADS 8
-#define NO_THREAD (-1)
 #define LOWEST_PRIORITY 0XFF
 
-// #define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
-#define YOU_SHOULD_NOT_BE_HERE
+#define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
 
 #include "debug.h"
-
-struct cpu_info
-{
-    stack_pointer_t psp;
-    stack_pointer_t msp;
-    CONTROL_t control;
-    uint32_t idle_loop_counter;
-    uint32_t sys_tick_counter;
-
-    stack_pointer_t psv_msp;
-    CONTROL_t psv_control;
-    uint32_t psv_lr;
-} cpu_info_at_start[CORECOUNT];
-
-// scheduler
-// every non running thread is identified by its psp
-// a running thread has the core number in it
-// a dead thread has NO_THREAD in it (-1)
-// only THREAD STATES: READY OR RUNNING
-stack_pointer_t thread_table[MAX_THREADS];
-
-// definitions for the idle threads
-stack_pointer_t idle_threads[CORECOUNT];
 
 #define IDLE_STACK_SIZE 256
 uint8_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
 
 extern uint32_t thread_end_by_return(uint32_t p);
-extern void init_thread_table(void);
 extern uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0);
 
+/////////////////////////////////////////////////////////////////////////////////////////////
+//
+//   HANDLER
+//
 void SysTick_Handler(void)
 {
     DEBUG_SYS_TICK;
     scb_hw->icsr = 1 << 28; // Set PendSV Pending
-    int core = get_core_num();
-    struct cpu_info *cpi = &cpu_info_at_start[core];
-    cpi->sys_tick_counter++;
 }
 
 stack_pointer_t PendSV_Handler_Main(
@@ -75,39 +51,11 @@ stack_pointer_t PendSV_Handler_Main(
     CONTROL_t control)
 {
     DEBUG_PEND_SV;
+
     ENTER_SCHEDULER;
-
-    struct cpu_info *cpi = &cpu_info_at_start[get_core_num()];
-
-    // must do some trash to avoid optimize out
-    cpi->psv_msp = msp;
-    cpi->psv_control = control;
-    cpi->psv_lr = lr;
-
-    int core = get_core_num();
-
-    if (thread_table[0].w != core && thread_table[1].w != core)
-    {
-        psp = thread_table[0];
-        thread_table[0].w = core;
-    }
-    else
-    {
-        if (thread_table[0].w == core)
-        {
-            thread_table[0] = psp;
-            psp = thread_table[1];
-            thread_table[1].w = core;
-        }
-        else
-        {
-            thread_table[1] = psp;
-            psp = thread_table[0];
-            thread_table[0].w = core;
-        }
-    }
+    psp = sl_next(get_core_num(), psp);
     LEAVE_SCHEDULER;
-    // at the moment do nothing
+
     return (psp);
 }
 
@@ -120,17 +68,7 @@ void init_sys_tick(int core)
     exception_set_exclusive_handler(PENDSV_EXCEPTION, (exception_handler_t)PendSV_Handler);
     exception_set_priority(PENDSV_EXCEPTION, LOWEST_PRIORITY);
 
-    // TODO check clock source
-    systick_hw->csr = 0;                                   // switch systick off
-    systick_hw->rvr = clock_get_hz(clk_sys) / 500UL - 1UL; // reload 2ms / 500Hz
-    systick_hw->cvr = 0L;                                  // current value
-    systick_hw->calib;                                     // calibration
-
-#if RELOCATE_VECTOR_TABLE
-    // set by name
     exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
-#else
-#endif
     exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY);
 
     // last action activate the counter
@@ -144,63 +82,45 @@ void init_sys_tick(int core)
 void __attribute__((noreturn)) main(void)
 {
     int core = get_core_num();
-    struct cpu_info *cpi = &cpu_info_at_start[core];
-    // get stackpointers at start
-    cpi->msp.w = __get_MSP();
-    cpi->psp.w = __get_PSP();
-    cpi->control.w = __get_CONTROL();
-    cpi->sys_tick_counter = 0;
-
     DEBUG_INIT;
 
     if (core == CORE0)
     {
-        // relocate core0 VTOR to scratch_y_base
-        __disable_irq();
+        sl_init();
 
-#if RELOCATE_VECTOR_TABLE
-        memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
-        scb_hw->vtor = (uint32_t)CORE0_VTOR;
-#else
-#endif
-        init_thread_table();
+        project_core0_main();
+
+        // multicore_reset_core1();
+        // multicore_launch_core1(main);
     }
-
+    else
+    {
+        project_core1_main();
+    }
     // init systick scheduler on both cores
     init_sys_tick(core);
+
     exception_set_exclusive_handler(SVCALL_EXCEPTION, SVC_Handler);
     exception_set_priority(SVCALL_EXCEPTION, LOWEST_PRIORITY);
 
     if (core == CORE0)
     {
-        __enable_irq();
-        project_core0_main();
-        __disable_irq();
-
-#if RELOCATE_VECTOR_TABLE
-        // start core 1
-        // project_coreX_main not in parallel
-        memcpy(CORE0_VTOR, CORE0_VTOR_SOURCE, VTOR_SIZE);
-        multicore_reset_core1();
-        multicore_launch_core1_raw(main, (uint32_t *)CORE1_STACK_TOP, (uint32_t)CORE1_VTOR);
-#else
         // multicore_reset_core1();
         // multicore_launch_core1(main);
-#endif
     }
     else
     {
-        __enable_irq();
-        project_core1_main();
-        __disable_irq();
+        // core 1 gives core 0 start QQQQQ
     }
-    {
+    { // final destination
         stack_pointer_t msp, psp;
         msp.bytes = core ? CORE1_STACK_TOP : CORE0_STACK_TOP;
         psp.bytes = idle_stacks[core] + IDLE_STACK_SIZE;
 
-        idle_threads[core].w = core;
+        sl_first(core, psp);
         // while(true)__enable_irq();
+        // interrupts re-enabled in stub function
+        __disable_irq();
         startup_thread_suicide_to_idle_thread(core, &idle_thread, psp, msp);
     }
 }
@@ -208,22 +128,8 @@ void __attribute__((noreturn)) main(void)
 uint32_t thread_end_by_return(uint32_t p)
 {
     // TODO delete active thread and enter idle if not enough threads remaining
-    __SEV();
-    YOU_SHOULD_NOT_BE_HERE;
-    while (true)
-    {
-    }
-}
-
-/// @brief initialized at scheduler start with all have no thread in it
-/// @param  none
-void init_thread_table(void)
-{
     ENTER_SCHEDULER;
-    for (int i = 0; i < MAX_THREADS; i++)
-    {
-        thread_table[i].w = NO_THREAD;
-    }
+    sl_end(get_core_num());
     LEAVE_SCHEDULER;
 }
 
@@ -247,15 +153,10 @@ void thread_create(
     psp.full_stack->pc.starter = thread_function;
     psp.full_stack->r0 = parameter;
     psp.full_stack->lr.starter = &thread_end_by_return;
-    psp.full_stack->xPSR = 1<<24;  // consistent state
+    psp.full_stack->xPSR = 1 << 24; // consistent state; without thumb HardFault
 
     ENTER_SCHEDULER;
-    int index = 0;
-    while (thread_table[index].w != NO_THREAD && index < MAX_THREADS)
-    {
-        index++;
-    }
-    thread_table[index] = psp;
+    sl_new(psp);
     LEAVE_SCHEDULER;
 }
 // all scheduling function run on thread level 0XC0
@@ -269,20 +170,8 @@ void SVC_Handler_Main(uint32_t lr,
                       stack_pointer_t psp,
                       CONTROL_t control)
 {
-    if (lr != THREAD_MODE_PSP_RETURN_CODE)
-    {
-        YOU_SHOULD_NOT_BE_HERE;
-    }
-    if (lr & 4)
-    {
-        ENTER_SCHEDULER;
-        LEAVE_SCHEDULER;
-    }
-    else
-    {
-        control.w++;
-        YOU_SHOULD_NOT_BE_HERE;
-    }
+    while (true)
+        ;
 };
 
 //-----------------------------------------------------------
@@ -293,14 +182,9 @@ void SVC_Handler_Main(uint32_t lr,
 
 uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0)
 {
-    r0 = get_core_num();
-    struct cpu_info *cpi = &cpu_info_at_start[r0];
-    cpi->idle_loop_counter = 0;
-    //__enable_irq();
     while (true)
     {
         __WFE();
-        cpi->idle_loop_counter++;
     }
     YOU_SHOULD_NOT_BE_HERE;
 }

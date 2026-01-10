@@ -1,4 +1,8 @@
-#include "cmsis_gcc.h"
+//#include "cmsis_gcc.h"
+#ifndef RP2040_SCHEDULER_STUBS
+#define RP2040_SCHEDULER_STUBS
+
+#include "pico.h"
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_stubs_gas.h"
 
@@ -84,3 +88,4 @@ void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
 ////////////////////////////////////////////////
 // DEV SWITCH
 #define RELOCATE_VECTOR_TABLE 0
+#endif
