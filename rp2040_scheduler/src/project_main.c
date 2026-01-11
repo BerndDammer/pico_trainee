@@ -15,7 +15,8 @@ uint32_t uncooperative_thread(uint32_t base_pin)
 {
     init_pin(base_pin);
     init_pin(base_pin + 1);
-    int sleep_time = 200 + 30 * base_pin;
+    //int sleep_time = 200 + 30 * base_pin;
+    int sleep_time = 100 + 10 * base_pin;
     while (true)
     {
         gpio_put(base_pin, true);
@@ -44,5 +45,5 @@ void project_core0_main(void)
 void project_core1_main(void)
 {
     // init hardware for core1 NVIC
-    thread_yield();
+    //thread_yield();
 }

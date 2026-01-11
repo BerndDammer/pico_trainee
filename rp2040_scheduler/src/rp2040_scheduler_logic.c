@@ -46,7 +46,7 @@ void sl_new(stack_pointer_t psp)
     int search_index = 0;
     while (searching)
     {
-        if (scheduler_data.thread_table[search_index].w != NO_THREAD)
+        if (scheduler_data.thread_table[search_index].w == NO_THREAD)
         {
             scheduler_data.thread_table[search_index] = psp;
             return;

@@ -71,12 +71,16 @@ void init_sys_tick(int core)
     exception_set_exclusive_handler(SYSTICK_EXCEPTION, SysTick_Handler);
     exception_set_priority(SYSTICK_EXCEPTION, LOWEST_PRIORITY);
 
+    systick_hw->csr = 0;                                   // switch systick off
+    systick_hw->rvr = clock_get_hz(clk_sys) / 500UL - 1UL; // reload 2ms / 500Hz
+    systick_hw->cvr = 0L;                                  // current value
+    systick_hw->calib;                                     // calibration
     // last action activate the counter
-    // TODO use sys_clk
     systick_hw->csr = 7;
 
     // 120 times slower
-    // systick_hw->csr = 3;
+    //systick_hw->rvr = 0X003FFFFF;
+    //systick_hw->csr = 3;
 }
 
 void __attribute__((noreturn)) main(void)
@@ -90,8 +94,8 @@ void __attribute__((noreturn)) main(void)
 
         project_core0_main();
 
-        // multicore_reset_core1();
-        // multicore_launch_core1(main);
+        multicore_reset_core1();
+        multicore_launch_core1(main);
     }
     else
     {
@@ -119,9 +123,7 @@ void __attribute__((noreturn)) main(void)
         psp.pw = &idle_stacks[core][IDLE_STACK_SIZE];
 
         sl_first(core, psp);
-        // while(true)__enable_irq();
-        // interrupts re-enabled in stub function
-        __disable_irq();
+
         startup_thread_suicide_to_idle_thread(core, &idle_thread, psp);
     }
 }
