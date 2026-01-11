@@ -8,10 +8,35 @@
 
 typedef union
 {
+    struct
+    {
+        unsigned int unused : 28;
+        unsigned int V : 1;
+        unsigned int C : 1;
+        unsigned int Z : 1;
+        unsigned int N : 1;
+    } APSR;
+    struct
+    {
+        unsigned int ISR : 6;
+        unsigned int unused : 26;
+    } IPSR;
+    struct
+    {
+        unsigned int unused1 : 24;
+        unsigned int T : 1;
+        unsigned int unused2 : 7;
+    } EPSR;
+    uint32_t w;
+} xPSR_t;
+
+typedef union
+{
     uint8_t *bytes;
     struct thread_stack_frame *frame_stack;
     struct full_stack_frame *full_stack;
     uint32_t w;
+    uint32_t *pw;
     int32_t signed_w;
 } stack_pointer_t;
 
@@ -31,7 +56,7 @@ struct thread_stack_frame
     uint32_t r12;
     program_counter_t lr;
     program_counter_t pc;
-    uint32_t xPSR;
+    xPSR_t xPSR;
 };
 
 struct full_stack_frame
@@ -51,7 +76,7 @@ struct full_stack_frame
     uint32_t r12;
     program_counter_t lr;
     program_counter_t pc;
-    uint32_t xPSR;
+    xPSR_t xPSR;
 };
 
 typedef union
@@ -78,7 +103,6 @@ extern stack_pointer_t PendSV_Handler_Main(
 void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
     uint32_t parameter,
     standard_thread_start start_func,
-    stack_pointer_t psp,
-    stack_pointer_t msp);
+    stack_pointer_t psp);
 
 #endif

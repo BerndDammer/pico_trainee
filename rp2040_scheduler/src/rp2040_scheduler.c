@@ -28,8 +28,8 @@
 
 #include "debug.h"
 
-#define IDLE_STACK_SIZE 256
-uint8_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
+#define IDLE_STACK_SIZE 256 / 4
+uint32_t idle_stacks[NUM_CORES][IDLE_STACK_SIZE];
 
 extern uint32_t thread_end_by_return(uint32_t p);
 extern uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0);
@@ -113,15 +113,16 @@ void __attribute__((noreturn)) main(void)
         // core 1 gives core 0 start QQQQQ
     }
     { // final destination
-        stack_pointer_t msp, psp;
-        msp.bytes = core ? CORE1_STACK_TOP : CORE0_STACK_TOP;
-        psp.bytes = idle_stacks[core] + IDLE_STACK_SIZE;
+        // decision: dont change msp
+        // less change of sdk environment
+        stack_pointer_t psp;
+        psp.pw = &idle_stacks[core][IDLE_STACK_SIZE];
 
         sl_first(core, psp);
         // while(true)__enable_irq();
         // interrupts re-enabled in stub function
         __disable_irq();
-        startup_thread_suicide_to_idle_thread(core, &idle_thread, psp, msp);
+        startup_thread_suicide_to_idle_thread(core, &idle_thread, psp);
     }
 }
 
@@ -136,7 +137,7 @@ uint32_t thread_end_by_return(uint32_t p)
 // all scheduling function run on thread level 0XC0
 // lowes on rp2040
 // a guard must only be used because all two cores can enter at the same time
-
+// TODO join before end ?????
 void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
 {
     switch (svc_code)
@@ -149,7 +150,7 @@ void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
         stack.full_stack->pc.w = psp.frame_stack->r0;
         stack.full_stack->r0 = psp.frame_stack->r3; // parameter
         stack.full_stack->lr.starter = &thread_end_by_return;
-        stack.full_stack->xPSR = 1 << 24; // consistent state; without thumb HardFault
+        stack.full_stack->xPSR.EPSR.T = 1; // consistent state; without thumb HardFault
 
         ENTER_SCHEDULER;
         sl_new(stack);

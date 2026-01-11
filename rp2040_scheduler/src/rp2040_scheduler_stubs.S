@@ -124,11 +124,8 @@ thread_yield:
 .type startup_thread_suicide_to_idle_thread, %function
 
 startup_thread_suicide_to_idle_thread:
-                                // intentionally set to msp stack top
-                                // this kills all msp foreground tasks
+        CPSID   I
         MSR     PSP, R2         // set stack for first thread start
-        MSR     MSP, R3
-
         // first activate psp
         // then enable interrupts
         // last switch to unprivileged mode
