@@ -131,6 +131,7 @@ void __attribute__((noreturn)) main(void)
 uint32_t thread_end_by_return(uint32_t p)
 {
     // TODO delete active thread and enter idle if not enough threads remaining
+    // TODO can't work this way
     ENTER_SCHEDULER;
     sl_end(get_core_num());
     LEAVE_SCHEDULER;
@@ -140,6 +141,9 @@ uint32_t thread_end_by_return(uint32_t p)
 // lowes on rp2040
 // a guard must only be used because all two cores can enter at the same time
 // TODO join before end ?????
+// SVC_Handler_Psp          LR = 0XFFFFFFFD
+// SVC_Handler_Msp_Thread   LR = 0XFFFFFFF9
+// SVC_Handler_Msp_Handler  LR = 0XFFFFFFF1
 void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
 {
     switch (svc_code)
