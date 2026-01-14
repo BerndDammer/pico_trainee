@@ -90,11 +90,16 @@ typedef union
     uint32_t w;
 } CONTROL_t;
 
-extern void SVC_Handler(void);
-extern void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp);
+void SVC_Handler(void);
+void SVC_Handler_PSP_ThreadStack(uint32_t svc_code, struct thread_stack_frame *psp);
+stack_pointer_t SVC_Handler_PSP_FullStack(uint32_t svc_code, stack_pointer_t psp);
+void SVC_Handler_MSP_Thread(uint32_t svc_code, struct thread_stack_frame *msp);
+void SVC_Handler_MSP_Handler(uint32_t svc_code, struct thread_stack_frame *msp);
 
-extern void PendSV_Handler(void);
-extern stack_pointer_t PendSV_Handler_Main(
+void PendSV_Handler(void);
+stack_pointer_t PendSV_Handler_Main(stack_pointer_t psp);
+
+void PendSV_Handler_Fault(
     stack_pointer_t psp,
     uint32_t lr,
     stack_pointer_t msp,

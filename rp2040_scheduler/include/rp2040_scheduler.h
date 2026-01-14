@@ -1,13 +1,13 @@
 #ifndef RP2040_SCHEDULER
 #define RP2040_SCHEDULER
 
-//#include "cmsis_gcc.h"
+// #include "cmsis_gcc.h"
 #include "pico.h"
 
 //------------------------------------------
 // CORE0 STACK TOP and Vector Table in SCRATCH Y
 // CORE1 STACK TOP and Vector Table in SCRATCH X
-// 
+//
 // NO ... VECTOR TABLE STAYS at bottom of ram
 //
 // complete main ram are free for
@@ -22,10 +22,10 @@
 // dont use 0B11XXXXXX interrupt priority
 // all sceduling handlers run in this priority level
 //
-// spinlock 30 and 31 are reserved for this scheduler
+// spinlock 14 and 15 are reserved for this scheduler
 //
 // all types of thread synchronisation is up to you
-// all threads run round robin
+// all threads run round-robin
 //
 // use sdk timer for clocking
 //
@@ -36,10 +36,11 @@
 // PICO_SPINLOCK_ID_OS2
 //
 
-
 typedef uint32_t (*standard_thread_start)(uint32_t parameter);
 
 /// @brief creates a thread
+/// @param thread_function
+///         your thread start
 /// @param initial_stack
 ///        put start address in initial_stack.pc
 ///        start parameter in initial_stack.r0 to .r3
@@ -51,6 +52,8 @@ extern void thread_create(
     uint32_t stack_size,
     uint32_t parameter);
 
+/// @brief nothing to do then yield
+/// @param
 extern void thread_yield(void);
 
 // implement these functions to start your project

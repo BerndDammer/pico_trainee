@@ -11,11 +11,6 @@
 .global SVC_Handler
 .type SVC_Handler, %function
 
-.global PendSV_Handler
-.type PendSV_Handler, %function
-
-.global PendSV_Handler_Main
-.type PendSV_Handler_Main, %function
 
 // FP Frame Pointer R11
 // SL Stack Limit R10
@@ -31,18 +26,57 @@ SVC_Handler:
         MOV     R3, LR
         MOVS    R2, #4
         TST     R3, R2
-        BEQ.N   use_msp
+        BEQ.N   used_msp
+
+        // get the svc code into R0; stack in R1
         MRS     R1, PSP
-        B.N     use_psp
-use_msp:
-        MRS     R1, MSP
-use_psp:                
         LDR     R2, [R1,#6*4]     // stacked pc; index word count im op code
         SUBS    R2, #2
         LDRB    R0, [R2]     
-        LDR     R3, =SVC_Handler_Main
-        BX      R3
+
+        // svc codes < 0x80 standard stack frame     
+        MOVS    R2, #0X80
+        TST     R0, R2
+        BEQ   stack_frame_handler
+
+
+
+
+
+
+stack_frame_handler:
+        LDR     R3, =SVC_Handler_PSP_ThreadStack
+        BX      R3              // return in c function
+
+used_msp:
+        // get the svc code into R0; stack in R1
+        MRS     R1, MSP
+        LDR     R2, [R1,#6*4]   // stacked pc; index word count im op code
+        SUBS    R2, #2
+        LDRB    R0, [R2]     
+
+        MOVS    R2, 0X08
+        TST     R3, R2
+        BEQ     from_handler
+
+        LDR     R3, =SVC_Handler_MSP_Thread
+        BX      R3              // return in c function
+
+from_handler:
+        LDR     R3, =SVC_Handler_MSP_Handler
+        BX      R3              // return in c function
      
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+.global PendSV_Handler
+.type PendSV_Handler, %function
+
+.global PendSV_Handler_Main
+.type PendSV_Handler_Main, %function
 
 //--------- PENDSV HANDLER --------------
 // this and only this exception is used for thread switching
@@ -136,7 +170,8 @@ startup_thread_suicide_to_idle_thread:
         MOVS    R3,#3           // psp stack and protected mode
         MSR     CONTROL,R3      // set to protected mode
         ISB                     // ARM Tech manual!
-        BX      R1          
+        BX      R1
+        // Start parameter in R0          
 
 .end        
 //---------
