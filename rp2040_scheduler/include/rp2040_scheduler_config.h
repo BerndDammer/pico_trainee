@@ -1,4 +1,4 @@
 #define SCHEDULER_FREQUENCY_HZ 1000UL
-#define MAX_THREADS
+#define MAX_THREADS 8
 #define RUN_UNIFIED 1
 

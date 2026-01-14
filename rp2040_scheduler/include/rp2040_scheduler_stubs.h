@@ -27,6 +27,12 @@ typedef union
         unsigned int T : 1;
         unsigned int unused2 : 7;
     } EPSR;
+    struct // stack frame has 1 word more on stack QQQQQQQQ
+    {
+        unsigned int unused1 : 9;
+        unsigned int EIGHT_BYTE_MISALIGNMENT : 1;
+        unsigned int unused2 : 22;
+    } STACK_FRAME_ALIGNMENT;
     uint32_t w;
 } xPSR_t;
 
