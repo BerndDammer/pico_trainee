@@ -12,5 +12,5 @@
 
 #define DEBUG_PEND_SV           \
     {                           \
-        gpio_xor_mask(1 << 17); \
+        gpio_xor_mask(1 << (16+ get_core_num())); \
     }

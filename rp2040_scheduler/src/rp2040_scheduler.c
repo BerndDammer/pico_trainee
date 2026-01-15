@@ -115,8 +115,9 @@ void __attribute__((noreturn)) main(void)
         // less change of sdk environment
         stack_pointer_t psp;
         psp.pw = &idle_stacks[core][IDLE_STACK_SIZE];
-
+        ENTER_SCHEDULER;
         sl_first(core, psp);
+        LEAVE_SCHEDULER;
 
         startup_thread_suicide_to_idle_thread(core, &idle_thread, psp);
     }
@@ -188,6 +189,7 @@ void SVC_Handler_MSP_Thread(uint32_t svc_code, struct thread_stack_frame *msp)
     switch (svc_code)
     {
     case SVC_THREAD_CREATE:
+    {
         stack_pointer_t stack;
         size_t s = sizeof(struct full_stack_frame);
         stack.w = msp->r1 + msp->r2 - s;
@@ -199,9 +201,10 @@ void SVC_Handler_MSP_Thread(uint32_t svc_code, struct thread_stack_frame *msp)
         ENTER_SCHEDULER;
         sl_new(stack);
         LEAVE_SCHEDULER;
+    }
+    break;
     case SVC_THREAD_YIELD:
         panic("Are you nuts\n");
-
         break;
     case SVC_TEST_LOW:
     case SVC_TEST_HIGH:
@@ -227,7 +230,6 @@ void SVC_Handler_MSP_Handler(uint32_t svc_code, struct thread_stack_frame *msp)
     break;
     case SVC_THREAD_YIELD:
         panic("Are you nuts\n");
-
         break;
     default:
         panic("You should not be here!\n");
