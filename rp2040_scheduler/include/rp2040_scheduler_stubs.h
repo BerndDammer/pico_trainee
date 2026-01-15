@@ -105,11 +105,11 @@ void SVC_Handler_MSP_Handler(uint32_t svc_code, struct thread_stack_frame *msp);
 void PendSV_Handler(void);
 stack_pointer_t PendSV_Handler_Main(stack_pointer_t psp);
 
-void PendSV_Handler_Fault(
-    stack_pointer_t psp,
-    uint32_t lr,
-    stack_pointer_t msp,
-    CONTROL_t control);
+// void PendSV_Handler_Fault(
+//     stack_pointer_t psp,
+//     uint32_t lr,
+//     stack_pointer_t msp,
+//     CONTROL_t control);
 
 void __attribute__((noreturn)) startup_thread_suicide_to_idle_thread(
     uint32_t parameter,

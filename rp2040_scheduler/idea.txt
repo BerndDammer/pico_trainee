@@ -12,4 +12,39 @@ PendSV SVC and Systick running through equal code
 
 QQQQ make scheduler start at 
 
+------------------------------
+32 bit group to wait for
+Threads an handler can set and clear bits
+
+#tech prob : how handler clean set and clear bits
+
+-----------------------------------
+upper 8 or 12 bits are set automatically after time expires
+
+----------------------------------
+byte stream from and to handler
+
+fill count automatically sets or clears a bit
+
+fixed 4 lowest bits are connected to byte pipes
+UART interface
+
+----------------------------------
+handler can inject a call back single executed thread element on event
+
+UART interface
+CAN over IP receiver
+RAW ethernet receiver
+
+thread can inject call back to other thread
+make more low-level elements which can build higher 
+communication theories 
+-----------------------------------
+
+tech check: handler makes svc call
+tech check: misaligned stack frame
+
+----------------------------------
+
+
 

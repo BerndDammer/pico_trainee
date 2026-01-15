@@ -13,7 +13,6 @@
 #include "rp2040_scheduler.h"
 #include "rp2040_scheduler_logic.h"
 #include "rp2040_scheduler_stubs.h"
-#include "linker_workaround.h"
 
 // TODO has pico lib QQQQ
 #include "cmsis_gcc.h"
@@ -24,7 +23,7 @@
 #define LEAVE_SCHEDULER
 #define LOWEST_PRIORITY 0XFF
 
-#define YOU_SHOULD_NOT_BE_HERE __BKPT(0X33);
+#define YOU_SHOULD_NOT_BE_HERE panic("You should not be here\n")
 
 #include "debug.h"
 
@@ -40,15 +39,10 @@ extern uint32_t __attribute__((noreturn)) idle_thread(uint32_t r0);
 //
 void SysTick_Handler(void)
 {
-    DEBUG_SYS_TICK;
     scb_hw->icsr = 1 << 28; // Set PendSV Pending
 }
 
-stack_pointer_t PendSV_Handler_Main(
-    stack_pointer_t psp,
-    uint32_t lr,
-    stack_pointer_t msp,
-    CONTROL_t control)
+stack_pointer_t PendSV_Handler_Main(stack_pointer_t psp)
 {
     DEBUG_PEND_SV;
 
@@ -79,8 +73,8 @@ void init_sys_tick(int core)
     systick_hw->csr = 7;
 
     // 120 times slower
-    //systick_hw->rvr = 0X003FFFFF;
-    //systick_hw->csr = 3;
+    // systick_hw->rvr = 0X003FFFFF;
+    // systick_hw->csr = 3;
 }
 
 void __attribute__((noreturn)) main(void)
@@ -138,13 +132,13 @@ uint32_t thread_end_by_return(uint32_t p)
 }
 
 // all scheduling function run on thread level 0XC0
-// lowes on rp2040
+// lowest on rp2040
 // a guard must only be used because all two cores can enter at the same time
 // TODO join before end ?????
 // SVC_Handler_Psp          LR = 0XFFFFFFFD
 // SVC_Handler_Msp_Thread   LR = 0XFFFFFFF9
 // SVC_Handler_Msp_Handler  LR = 0XFFFFFFF1
-void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
+void SVC_Handler_PSP_ThreadStack(uint32_t svc_code, struct thread_stack_frame *psp)
 {
     switch (svc_code)
     {
@@ -152,9 +146,9 @@ void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
     {
         stack_pointer_t stack;
         size_t s = sizeof(struct full_stack_frame);
-        stack.w = psp.frame_stack->r1 + psp.frame_stack->r2 - s;
-        stack.full_stack->pc.w = psp.frame_stack->r0;
-        stack.full_stack->r0 = psp.frame_stack->r3; // parameter
+        stack.w = psp->r1 + psp->r2 - s;
+        stack.full_stack->pc.w = psp->r0;
+        stack.full_stack->r0 = psp->r3; // parameter
         stack.full_stack->lr.starter = &thread_end_by_return;
         stack.full_stack->xPSR.EPSR.T = 1; // consistent state; without thumb HardFault
 
@@ -163,14 +157,83 @@ void SVC_Handler_Main(uint32_t svc_code, stack_pointer_t psp)
         LEAVE_SCHEDULER;
     }
     break;
-    case SVC_THREAD_YIELD:
+    case SVC_TEST_LOW:
         scb_hw->icsr = 1 << 28; // Set PendSV Pending
         break;
     default:
         panic("Unsupported SVC call");
         break;
     }
-};
+}
+
+stack_pointer_t SVC_Handler_PSP_FullStack(uint32_t svc_code, stack_pointer_t psp)
+{
+    switch (svc_code)
+    {
+    case SVC_THREAD_YIELD:
+        scb_hw->icsr = 1 << 28; // Set PendSV Pending
+        break;
+    case SVC_TEST_HIGH:
+        scb_hw->icsr = 1 << 28; // Set PendSV Pending
+        break;
+    default:
+        panic("Unsupported SVC call");
+        break;
+    }
+    return psp;
+}
+
+void SVC_Handler_MSP_Thread(uint32_t svc_code, struct thread_stack_frame *msp)
+{
+    switch (svc_code)
+    {
+    case SVC_THREAD_CREATE:
+        stack_pointer_t stack;
+        size_t s = sizeof(struct full_stack_frame);
+        stack.w = msp->r1 + msp->r2 - s;
+        stack.full_stack->pc.w = msp->r0;
+        stack.full_stack->r0 = msp->r3; // parameter
+        stack.full_stack->lr.starter = &thread_end_by_return;
+        stack.full_stack->xPSR.EPSR.T = 1; // consistent state; without thumb HardFault
+
+        ENTER_SCHEDULER;
+        sl_new(stack);
+        LEAVE_SCHEDULER;
+    case SVC_THREAD_YIELD:
+        panic("Are you nuts\n");
+
+        break;
+    case SVC_TEST_LOW:
+    case SVC_TEST_HIGH:
+    {
+        scb_hw->icsr = 1 << 28; // Set PendSV Pending
+    }
+    break;
+    default:
+        panic("You shold not be here!\n");
+        break;
+    }
+}
+
+void SVC_Handler_MSP_Handler(uint32_t svc_code, struct thread_stack_frame *msp)
+{
+    switch (svc_code)
+    {
+    case SVC_TEST_LOW:
+    case SVC_TEST_HIGH:
+    {
+        scb_hw->icsr = 1 << 28; // Set PendSV Pending
+    }
+    break;
+    case SVC_THREAD_YIELD:
+        panic("Are you nuts\n");
+
+        break;
+    default:
+        panic("You should not be here!\n");
+        break;
+    }
+}
 
 //-----------------------------------------------------------
 //             idle treads
