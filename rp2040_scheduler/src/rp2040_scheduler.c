@@ -94,6 +94,7 @@ void __attribute__((noreturn)) main(void)
     else
     {
         project_core1_main();
+        busy_wait_us(1000UL);
     }
     // init systick scheduler on both cores
     init_sys_tick(core);
