@@ -46,5 +46,35 @@ tech check: misaligned stack frame
 
 ----------------------------------
 
+Counter compare>
+Transmitter increments counter
+Receiver increments counter
+Bit is set as long as transmitt counter > receive counter
+PutIncrement
+TakeIncrement
+WaitIncrement
+--------------------------------
+Incremental semaphore
+Access increments counter
+Release decrements counter
+Increment access waits until counter decrements to zero
+Accquire
+Release
+(Bit set for free ???)
+------------------------------
+Rendevous
+RendevousEnter: FirstTime: wait and set bit 
+RendevousEnter: SecondTime: release both and clear bit 
+(Define number to meat ????)
+------------------------------
+Simple bit set and clear ???
+e.G state of machine
+------------------------------
+Bit set aftrer timer
+------------------------------
+
+
+
+
 
 
