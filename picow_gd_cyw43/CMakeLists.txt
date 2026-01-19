@@ -44,6 +44,8 @@ include_directories(
 file(GLOB georgerobotics
         ${PROJECT_SOURCE_DIR}/cyw43-driver/src/*.c
 )
+
+
 ###########################################################################################
 
 include_directories(
@@ -61,6 +63,7 @@ file(GLOB all_SRCS
 
 
 add_executable(picow_gd_cyw43 ${all_SRCS} ${georgerobotics})
+pico_generate_pio_header(picow_gd_cyw43 ${PROJECT_SOURCE_DIR}/src/cyw43_bus_pio_spi.pio)
 
 #####################################################################################
 
@@ -83,7 +86,8 @@ target_include_directories(picow_gd_cyw43 PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(picow_gd_cyw43 
-        
+        hardware_pio
+        hardware_dma
         )
 
 pico_add_extra_outputs(picow_gd_cyw43)
