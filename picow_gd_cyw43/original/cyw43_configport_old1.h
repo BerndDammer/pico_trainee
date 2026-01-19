@@ -1,0 +1,7 @@
+#ifndef CYW43_CONFIGPORT_H
+#define CYW43_CONFIGPORT_H
+
+#define CYW43_LWIP FALSE
+#define CYW43_SPI_PIO TRUE 
+
+#endif
