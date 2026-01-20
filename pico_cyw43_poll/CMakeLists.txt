@@ -61,7 +61,7 @@ pico_set_program_version(pico_llCyw43 "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(pico_llCyw43 1)
-pico_enable_stdio_usb(pico_llCyw43 0)
+pico_enable_stdio_usb(pico_llCyw43 1)
 
 # Add the standard library to the build
 target_link_libraries(pico_llCyw43
@@ -75,13 +75,13 @@ target_include_directories(pico_llCyw43 PRIVATE
 # Add any user requested libraries
 # does not see pio functions cyw43_write_reg_ ...
 target_link_libraries(pico_llCyw43 
-        pico_cyw43_driver
-        # pico_cyw43_arch_none
-        pico_cyw43_arch_poll 
-        pico_cyw43_arch 
-        pico_async_context_poll 
-        pico_lwip
-        pico_lwip_nosys
+        # pico_cyw43_driver
+        pico_cyw43_arch_none
+        # pico_cyw43_arch_poll 
+        # pico_cyw43_arch 
+        pico_async_context_poll
+        # pico_lwip
+        # pico_lwip_nosys
 )
 
 pico_add_extra_outputs(pico_llCyw43)
