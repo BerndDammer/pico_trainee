@@ -19,7 +19,7 @@ void entry(void)
     async_context_poll_init_with_defaults(&d.ac);
     cyw43_arch_set_async_context(&d.ac.core); // must be called before init
 
-    d.nops = cyw43_arch_init();
+    //d.nops = cyw43_arch_init();
     d.nops = cyw43_arch_init_with_country(CYW43_COUNTRY_GERMANY);
     cyw43_arch_enable_sta_mode();
 
