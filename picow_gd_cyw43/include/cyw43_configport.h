@@ -14,7 +14,7 @@
 #include "pico/time.h"
 
 //######################################
-#define CYW43_LWIP FALSE
+#define CYW43_LWIP (0)
 //#######################################
 
 
@@ -39,8 +39,8 @@ extern "C" {
 #define STATIC static
 #endif
 
-#define CYW43_USE_SPI 1
-#define CYW43_SPI_PIO 1
+#define CYW43_USE_SPI (1)
+#define CYW43_SPI_PIO (1)
 
 #ifndef CYW43_CHIPSET_FIRMWARE_INCLUDE_FILE
 #if CYW43_USE_FIRMWARE_PARTITION

@@ -41,8 +41,12 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/cyw43-driver/src
 )
 
+# select wich files to compile
 file(GLOB georgerobotics
-        ${PROJECT_SOURCE_DIR}/cyw43-driver/src/*.c
+        ${PROJECT_SOURCE_DIR}/cyw43-driver/src/cyw43_ctrl.c
+        ${PROJECT_SOURCE_DIR}/cyw43-driver/src/cyw43_ll.c
+        ${PROJECT_SOURCE_DIR}/cyw43-driver/src/cyw43_stats.c
+        ${PROJECT_SOURCE_DIR}/cyw43-driver/src/cyw43_spi.c
 )
 
 
