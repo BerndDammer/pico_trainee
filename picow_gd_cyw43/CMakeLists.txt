@@ -66,6 +66,8 @@ add_executable(picow_gd_cyw43 ${all_SRCS} ${georgerobotics})
 pico_generate_pio_header(picow_gd_cyw43 ${PROJECT_SOURCE_DIR}/src/cyw43_bus_pio_spi.pio)
 
 #####################################################################################
+# add_compile_definitions(pico_llCyw43 PUBLIC CYW43_USE_PIO=TRUE ) 
+#####################################################################################
 
 
 pico_set_program_name(picow_gd_cyw43 "picow_gd_cyw43")
