@@ -20,10 +20,10 @@ void process_tud(async_context_t *context,
 	async_context_set_work_pending(&task->async_context.core, &task->worker);
 }
 
-void tud_task_set_active_init(tud_task_t *task, bool active)
-{
-	task->active = active;
-}
+// void tud_task_set_active_init(tud_task_t *task, bool active)
+// {
+// 	task->active = active;
+// }
 
 void tud_task_init(tud_task_t *task)
 {
@@ -39,7 +39,6 @@ void tud_task_init(tud_task_t *task)
 	task->worker.user_data = task;
 
 	cyw43_arch_set_async_context(&task->async_context.core); // must be called before init
-
 	// d.nops = cyw43_arch_init();
 	cyw43_arch_init_with_country(CYW43_COUNTRY_GERMANY); // only once or hard-fault
 	central.status = INITIALIZED;

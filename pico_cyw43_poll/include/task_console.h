@@ -16,7 +16,6 @@ typedef struct
 	async_context_poll_t async_context;
 	async_when_pending_worker_t worker;
 	char c;
-	bool has;
 } console_task_t;
 
 void console_task_init(console_task_t *task);
