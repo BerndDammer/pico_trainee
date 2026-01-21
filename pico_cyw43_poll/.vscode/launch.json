@@ -28,13 +28,6 @@
             ]
         },
         {
-            "name": "Launch Chrome",
-            "request": "launch",
-            "type": "chrome",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
             "name": "Pico Debug (Cortex-Debug with external OpenOCD)",
             "cwd": "${workspaceRoot}",
             "executable": "${command:raspberry-pi-pico.launchTargetPath}",

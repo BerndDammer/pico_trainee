@@ -34,7 +34,7 @@ project(pico_llCyw43 C CXX ASM)
 pico_sdk_init()
 
 ###########################################################################################
-add_compile_definitions(pico_llCyw43 PUBLIC CYW43_LWIP=FALSE )
+# add_compile_definitions(pico_llCyw43 PUBLIC CYW43_LWIP=FALSE )
 # add_compile_definitions(pico_llCyw43 PUBLIC CYW43_SPI_PIO=1 ) # linking problem
 ###########################################################################################
 
@@ -76,8 +76,8 @@ target_include_directories(pico_llCyw43 PRIVATE
 # does not see pio functions cyw43_write_reg_ ...
 target_link_libraries(pico_llCyw43 
         # pico_cyw43_driver
-        # pico_cyw43_arch_none
-        pico_cyw43_arch_poll 
+        pico_cyw43_arch_none
+        # pico_cyw43_arch_poll 
         # pico_cyw43_arch 
         pico_async_context_poll
         # pico_lwip
