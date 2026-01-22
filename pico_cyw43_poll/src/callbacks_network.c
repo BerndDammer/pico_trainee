@@ -1,33 +1,37 @@
 #include "cyw43.h"
 #include "central.h"
 
+const char *itf_txt[2]=
+{
+    "STATION      :",
+    "ACCESS POINT :"
+};
 /////////////////////////////////////////////////////////////////////
+static void monitoring(const char *message, cyw43_t *self, int itf)
+{
+    if(central.cyw43_self == NULL)
+    {
+        central.cyw43_self = self;
+        puts("loaded internal struct\n");
+    }
+    printf("%s %s\n", itf_txt[itf], message);
+}
 ////////////////////////////// callbacks for network stack
 void cyw43_cb_tcpip_init(cyw43_t *self, int itf)
 {
-    puts("CB init\n");
-    if(central.cyw43_self == NULL)
-    {
-        central.cyw43_self = self;
-        puts("loaded internal struct\n");
-    }
+    monitoring( __FUNCTION__ , self, itf);
 }
 void cyw43_cb_tcpip_deinit(cyw43_t *self, int itf)
 {
-    puts("CB de-init\n");
+    monitoring( __FUNCTION__ , self, itf);
 }
 void cyw43_cb_tcpip_set_link_up(cyw43_t *self, int itf)
 {
-    puts("CB link up\n");
-    if(central.cyw43_self == NULL)
-    {
-        central.cyw43_self = self;
-        puts("loaded internal struct\n");
-    }
+    monitoring( __FUNCTION__ , self, itf);
 }
 void cyw43_cb_tcpip_set_link_down(cyw43_t *self, int itf)
 {
-    puts("CB link down\n");
+    monitoring( __FUNCTION__ , self, itf);
 }
 
 
@@ -44,12 +48,11 @@ void cyw43_cb_process_ethernet(void *cb_data, int itf, size_t len, const uint8_t
 
 int cyw43_tcpip_link_status(cyw43_t *self, int itf)
 {
-    if(central.cyw43_self == NULL)
-    {
-        central.cyw43_self = self;
-        puts("loaded internal struct\n");
-    }
-    puts("CB status\n");
+    monitoring( __FUNCTION__ , self, itf);
+
+    puts("CB tcpip link status\n");
     printf("State %i\n", self->itf_state);
-    printf("cyw43_wifi_link_status %i\n", cyw43_wifi_link_status(self, CYW43_ITF_STA));
+    /// QQQ endless looop
+    printf("cyw43_wifi_link_status STA %i\n", cyw43_wifi_link_status(self, CYW43_ITF_STA));
+    printf("cyw43_wifi_link_status AP  %i\n", cyw43_wifi_link_status(self, CYW43_ITF_AP));
 }
