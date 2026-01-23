@@ -34,7 +34,7 @@
             "request": "launch",
             "type": "cortex-debug",
             "servertype": "external",
-            "gdbTarget": "aewinter.kwangya:3333",
+            "gdbTarget": "aewinter.kwangya:3343",
             "gdbPath": "${command:raspberry-pi-pico.getGDBPath}",
             "device": "${command:raspberry-pi-pico.getChipUppercase}",
             "svdFile": "${userHome}/.pico-sdk/sdk/2.2.0/src/${command:raspberry-pi-pico.getChip}/hardware_regs/${command:raspberry-pi-pico.getChipUppercase}.svd",

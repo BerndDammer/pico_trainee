@@ -40,7 +40,7 @@ void cyw43_cb_process_ethernet(void *cb_data, int itf, size_t len, const uint8_t
     {
         p[i] = buf[i];
     }
-    puts("CB ethernet frame");
+    printf("CB ethernet frame itf %i\n", itf);
     printf("%s  FrameType %04X\n", itf_txt[itf], p[12] << 8 | p[13]); // network byte order
 }
 
@@ -55,4 +55,9 @@ int cyw43_tcpip_link_status(cyw43_t *self, int itf)
     printf("cyw43_wifi_link_status AP  %i\n", cyw43_wifi_link_status(self, CYW43_ITF_AP));
 }
 
-
+// workaround:
+// dummy implementation because used in cyw43_ll send_ethernet
+// part of not used lwip
+void pbuf_copy_partial(void *buf, int a, int b, int c)
+{
+}

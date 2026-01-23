@@ -8,6 +8,7 @@
 #include "task_console.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "pico.h"
 #include "pico/stdlib.h"
@@ -37,30 +38,38 @@ void process_char(async_context_t *taskp,
 	console_task_t *task = worker->user_data;
 	switch (task->c)
 	{
-	case 'a':
+	case '1':
 		cyw43_arch_enable_ap_mode("MOTU", "nevernever", CYW43_AUTH_WPA3_WPA2_AES_PSK);
-
 		central.status = AP_ACTIVATED;
 		break;
-	case 'A':
+	case '0':
 		cyw43_arch_disable_ap_mode();
 		puts("cyw43_arch_disable_ap_mode");
 
 		central.status = INITIALIZED;
 		break;
-	case 's':
+	case '2':
+		cyw43_arch_disable_sta_mode();
+		puts("cyw43_arch_disable_sta_mode");
+		break;
+	case '3':
+		cyw43_arch_enable_sta_mode();
+		r = cyw43_arch_wifi_connect_async("MOTU", "nevernever", CYW43_AUTH_WPA3_WPA2_AES_PSK);
+		printf("cyw43_arch_wifi_connect_async %i\n", r);
+		break;
+	case '4':
+		cyw43_arch_disable_sta_mode();
+		puts("cyw43_arch_disable_sta_mode");
+		break;
+	case '5':
 		cyw43_arch_enable_sta_mode();
 		r = cyw43_arch_wifi_connect_async("flat", "wilhelmine", CYW43_AUTH_WPA3_WPA2_AES_PSK);
 		printf("cyw43_arch_wifi_connect_async %i\n", r);
 		break;
-	case 'S':
-		cyw43_arch_disable_sta_mode();
-		puts("cyw43_arch_disable_sta_mode");
-		break;
 	case 'm':
-		uint8_t mac[6];
 		if (central.cyw43_self != NULL)
 		{
+			uint8_t mac[6];
 			int result;
 			result = cyw43_wifi_get_mac(central.cyw43_self, CYW43_ITF_STA, mac);
 			printf("STA MAC [%02X:%02X:%02X:%02X:%02X:%02X]\n",
@@ -68,6 +77,30 @@ void process_char(async_context_t *taskp,
 			result = cyw43_wifi_get_mac(central.cyw43_self, CYW43_ITF_AP, mac);
 			printf("AP  MAC [%02X:%02X:%02X:%02X:%02X:%02X]\n",
 				   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+		}
+		break;
+	case 't':
+		if (central.cyw43_self != NULL)
+		{
+			int result;
+			uint8_t mac[6];
+			struct
+			{
+				uint8_t dest[6];
+				uint8_t src[6];
+				uint16_t ether_type;
+				uint8_t payload[1500 - 2];
+			} block;
+
+			result = cyw43_wifi_get_mac(central.cyw43_self, CYW43_ITF_STA, mac);
+			for (int i = 0; i < 6; i++)
+			{
+				block.dest[i] = 0XFF;
+				block.src[i] = mac[i];
+				block.ether_type = 0x1147; // network byte order
+			}
+			result = cyw43_send_ethernet(central.cyw43_self, CYW43_ITF_STA, 6 + 6 + 62 + 17, &block, false);
+			printf("cyw43_send_ethernet result: %i\n", result);
 		}
 		break;
 	case 'h':
@@ -91,13 +124,16 @@ void process_char(async_context_t *taskp,
 		printf("\n\n");
 		printf("------------------------------------\n");
 		printf("CYW43 Test\n");
-		printf("a activate access point\n");
-		printf("A cut off access point\n");
-		printf("s activate station\n");
-		printf("S de-activate station\n");
+		printf("0 cut off access point\n");
+		printf("1 activate access point\n");
+		printf("2 de-activate downlink station\n");
+		printf("3 activate downlink station\n");
+		printf("2 de-activate downlink station\n");
+		printf("4 activate downlink station\n");
+		printf("5 de-activate station\n");
+		printf("t transmit block\n");
 		printf("m show mac\n");
 		printf("h scan\n");
-		printf("d de-activate\n");
 		printf("press key to select\n");
 		printf("------------------------------------\n");
 		break;
