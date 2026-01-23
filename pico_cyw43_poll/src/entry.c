@@ -1,8 +1,5 @@
-//#include <stdio.h>
 #include "pico.h"
 #include "pico/stdio.h"
-//#include "hardware/timer.h"
-//#include "hardware/clocks.h"
 
 #include "pico/async_context_poll.h"
 

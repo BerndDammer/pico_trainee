@@ -75,11 +75,11 @@ target_include_directories(pico_llCyw43 PRIVATE
 # Add any user requested libraries
 # does not see pio functions cyw43_write_reg_ ...
 target_link_libraries(pico_llCyw43 
-        # pico_cyw43_driver
+        pico_async_context_poll
         pico_cyw43_arch_none
+        # pico_cyw43_driver
         # pico_cyw43_arch_poll 
         # pico_cyw43_arch 
-        pico_async_context_poll
         # pico_lwip
         # pico_lwip_nosys
 )

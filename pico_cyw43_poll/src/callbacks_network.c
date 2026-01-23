@@ -1,15 +1,14 @@
 #include "cyw43.h"
 #include "central.h"
 
-const char *itf_txt[2]=
-{
-    "STATION      :",
-    "ACCESS POINT :"
-};
+const char *itf_txt[2] =
+    {
+        "STATION      :",
+        "ACCESS POINT :"};
 /////////////////////////////////////////////////////////////////////
 static void monitoring(const char *message, cyw43_t *self, int itf)
 {
-    if(central.cyw43_self == NULL)
+    if (central.cyw43_self == NULL)
     {
         central.cyw43_self = self;
         puts("loaded internal struct\n");
@@ -19,21 +18,20 @@ static void monitoring(const char *message, cyw43_t *self, int itf)
 ////////////////////////////// callbacks for network stack
 void cyw43_cb_tcpip_init(cyw43_t *self, int itf)
 {
-    monitoring( __FUNCTION__ , self, itf);
+    monitoring(__FUNCTION__, self, itf);
 }
 void cyw43_cb_tcpip_deinit(cyw43_t *self, int itf)
 {
-    monitoring( __FUNCTION__ , self, itf);
+    monitoring(__FUNCTION__, self, itf);
 }
 void cyw43_cb_tcpip_set_link_up(cyw43_t *self, int itf)
 {
-    monitoring( __FUNCTION__ , self, itf);
+    monitoring(__FUNCTION__, self, itf);
 }
 void cyw43_cb_tcpip_set_link_down(cyw43_t *self, int itf)
 {
-    monitoring( __FUNCTION__ , self, itf);
+    monitoring(__FUNCTION__, self, itf);
 }
-
 
 volatile uint8_t p[256];
 void cyw43_cb_process_ethernet(void *cb_data, int itf, size_t len, const uint8_t *buf)
@@ -43,12 +41,12 @@ void cyw43_cb_process_ethernet(void *cb_data, int itf, size_t len, const uint8_t
         p[i] = buf[i];
     }
     puts("CB ethernet frame");
-    printf("FrameType %04X\n", p[12]<<8|p[13]); //network byte order
+    printf("%s  FrameType %04X\n", itf_txt[itf], p[12] << 8 | p[13]); // network byte order
 }
 
 int cyw43_tcpip_link_status(cyw43_t *self, int itf)
 {
-    monitoring( __FUNCTION__ , self, itf);
+    monitoring(__FUNCTION__, self, itf);
 
     puts("CB tcpip link status\n");
     printf("State %i\n", self->itf_state);
@@ -56,3 +54,5 @@ int cyw43_tcpip_link_status(cyw43_t *self, int itf)
     printf("cyw43_wifi_link_status STA %i\n", cyw43_wifi_link_status(self, CYW43_ITF_STA));
     printf("cyw43_wifi_link_status AP  %i\n", cyw43_wifi_link_status(self, CYW43_ITF_AP));
 }
+
+
