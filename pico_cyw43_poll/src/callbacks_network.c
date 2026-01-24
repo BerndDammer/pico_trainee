@@ -4,7 +4,8 @@
 const char *itf_txt[2] =
     {
         "STATION      :",
-        "ACCESS POINT :"};
+        "ACCESS POINT :" //
+};
 /////////////////////////////////////////////////////////////////////
 static void monitoring(const char *message, cyw43_t *self, int itf)
 {
